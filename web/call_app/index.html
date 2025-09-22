@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AudioAssuranceSystem - 通話介面</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>即時通話客戶端</h1>
+        <p>WebRTC + WebSocket 測試介面</p>
+      </header>
+
+      <main class="main-content">
+        <section id="setup-section" class="card">
+          <h2>連線設定</h2>
+          <div class="form-group">
+            <label for="roomId">房間 ID (Room ID)</label>
+            <input
+              type="text"
+              id="roomId"
+              placeholder="請輸入一個共享的房間 ID"
+            />
+          </div>
+          <div class="form-group">
+            <label for="clientId">您的 ID (Client ID)</label>
+            <input
+              type="text"
+              id="clientId"
+              placeholder="請輸入您自己的唯一 ID"
+            />
+          </div>
+          <button id="join-btn" class="btn btn-primary">加入房間</button>
+        </section>
+
+        <section id="incoming-call-section" class="card incoming-call hidden">
+          <h2>有新的來電...</h2>
+          <p><strong id="caller-id"></strong> 正在呼叫您</p>
+          <div class="button-group">
+            <button id="answer-btn" class="btn btn-success">接聽</button>
+            <button id="decline-btn" class="btn btn-danger">拒絕</button>
+          </div>
+        </section>
+
+        <section id="call-section" class="card hidden">
+          <h2>通話控制</h2>
+          <p>
+            房間: <strong id="display-room-id"></strong> | 您的 ID:
+            <strong id="display-client-id"></strong>
+          </p>
+          <p>通話狀態: <strong id="call-status">等待中...</strong></p>
+
+          <div class="button-group">
+            <button id="call-btn" class="btn btn-success" disabled>
+              發起通話
+            </button>
+            <button id="hangup-btn" class="btn btn-danger" disabled>
+              掛斷
+            </button>
+          </div>
+        </section>
+
+        <section id="status-section" class="card">
+          <h2>狀態日誌</h2>
+          <div id="status-display" class="status-display">等待加入房間...</div>
+        </section>
+
+        <section id="audio-section" class="card">
+          <h2>遠端音訊</h2>
+          <audio id="remote-audio" controls autoplay playsinline></audio>
+          <p class="muted">當對方開始說話時，您將在這裡聽到聲音。</p>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/webrtc_client.js"></script>
+    <script src="js/websocket_client.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>
