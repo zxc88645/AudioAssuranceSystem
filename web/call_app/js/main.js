@@ -1,8 +1,8 @@
 /**
- * AudioAssuranceSystem - 通話介面主應用程式邏輯 (版本 1.5 - 最終版，支援手動接聽)
+ * AudioAssuranceSystem - 通話介面主應用程式邏輯
  */
 document.addEventListener("DOMContentLoaded", () => {
-  // --- DOM 元素獲取 ---
+  // --- DOM 元素獲取 (維持不變) ---
   const setupSection = document.getElementById("setup-section");
   const callSection = document.getElementById("call-section");
   const incomingCallSection = document.getElementById("incoming-call-section");
@@ -20,15 +20,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const callerIdDisplay = document.getElementById("caller-id");
   const callStatusDisplay = document.getElementById("call-status");
 
-  // --- 應用程式狀態變數 ---
+  // --- 應用程式狀態變數 (維持不變) ---
   let webrtcClient = null;
   let webSocketStreamer = null;
   let roomId = "";
   let clientId = "";
-  let pendingOffer = null; // 用於儲存待處理的 offer
+  let pendingOffer = null;
 
-  // --- UI 更新函式 ---
-
+  // --- UI 更新函式 (維持不變) ---
   function logStatus(message) {
     const timestamp = new Date().toLocaleTimeString();
     statusDisplay.innerHTML =
@@ -64,11 +63,9 @@ document.addEventListener("DOMContentLoaded", () => {
     setupSection.classList.remove("hidden");
     callSection.classList.add("hidden");
     hideIncomingCallUI();
-
     callBtn.disabled = true;
     hangupBtn.disabled = true;
     joinBtn.disabled = false;
-
     remoteAudio.srcObject = null;
     updateCallStatus("waiting", "等待中...");
     logStatus("已重設介面，請重新加入房間。");
@@ -106,19 +103,39 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       onPeerLeft: (peerId) => {
         logStatus(`對等方 [${peerId}] 已離開房間`);
-        handleHangup(); // 對方離開等同於掛斷
+        handleHangup();
       },
-      // *** 核心修改處 ***: onOffer 現在會接收到 fromId
       onOffer: (offerMessage, fromId) => {
-        pendingOffer = offerMessage; // 保存 offer
+        pendingOffer = offerMessage;
         logStatus(`收到來自 [${fromId}] 的通話請求`);
-        showIncomingCallUI(fromId); // 使用 fromId 顯示來電通知
+        showIncomingCallUI(fromId);
       },
+
+      // --- *** 核心修改處 *** ---
       onRemoteStream: (stream) => {
         logStatus("收到遠端音訊串流，通話已連接！");
-        remoteAudio.srcObject = stream;
         updateCallStatus("active", "通話中");
+
+        if (remoteAudio.srcObject !== stream) {
+          remoteAudio.srcObject = stream;
+        }
+
+        // 嘗試播放音訊，並處理瀏覽器可能的回絕
+        const playPromise = remoteAudio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then((_) => {
+              logStatus("遠端音訊已成功播放。");
+            })
+            .catch((error) => {
+              console.error("自動播放失敗:", error);
+              logStatus("警告：瀏覽器阻止了音訊自動播放。請手動點擊播放按鈕。");
+              // 您可以在此處顯示一個 UI 提示，讓使用者手動點擊
+            });
+        }
       },
+      // --- *** 修改結束 *** ---
+
       onError: (errorMessage) => {
         logStatus(`發生錯誤: ${errorMessage}`);
         alert(`發生錯誤: ${errorMessage}`);
@@ -130,6 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
     webrtcClient.connect();
   }
 
+  // --- (其他 handle... 函式與 startStreaming 函式維持不變) ---
   async function handleStartCall() {
     if (!webrtcClient) return;
     callBtn.disabled = true;
@@ -160,7 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
       webrtcClient.addLocalStreamToConnection();
       await webrtcClient.createAnswer(pendingOffer);
       startStreaming(localStream);
-      pendingOffer = null; // 清除待處理的 offer
+      pendingOffer = null;
     } catch (error) {
       logStatus(`回覆通話失敗: ${error.message}`);
       updateCallStatus("waiting", "接聽失敗");
@@ -170,8 +188,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleDeclineCall() {
     logStatus("已拒絕來電");
     hideIncomingCallUI();
-    // (可選) 在這裡可以發送一個 'decline' 信令訊息通知對方
-    // webrtcClient.sendSignalingMessage({ type: 'decline' });
     pendingOffer = null;
   }
 
@@ -199,7 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
     webSocketStreamer.start();
   }
 
-  // --- 綁定事件監聽器 ---
+  // --- 綁定事件監聽器 (維持不變) ---
   joinBtn.addEventListener("click", handleJoinRoom);
   callBtn.addEventListener("click", handleStartCall);
   answerBtn.addEventListener("click", handleAnswerCall);

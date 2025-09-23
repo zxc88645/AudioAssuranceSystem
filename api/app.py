@@ -9,12 +9,8 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-
-# 修正: 採用更明確的匯入方式，直接從 settings 模組匯入 settings 物件
-# 這樣 Pylint 就能正確識別其成員
 from config.settings import settings
 
-# 匯入不同模組的路由器
 from api import routes as http_routes
 from api import websocket as websocket_routes
 

@@ -13,7 +13,7 @@ websockets>=12.0  # FastAPI 處理 WebSocket 連線的底層依賴
 aiortc>=1.5.0     # 實現 WebRTC 信令伺服器及後端處理的關鍵函式庫
 
 # API 客戶端
-openai>=1.3.7
+openai==1.3.7
 httpx>=0.25.2
 
 # 音訊處理

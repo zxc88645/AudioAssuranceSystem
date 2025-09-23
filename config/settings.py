@@ -31,8 +31,9 @@ class Settings:
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 
     # === OpenAI 模型設定 ===
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o")
     STT_MODEL: str = os.getenv("STT_MODEL", "whisper-1")
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    STT_PROMPT: str = os.getenv("STT_PROMPT", "繁體中文")
 
     # === 後端服務埠號 (Ports) ===
     # 每個獨立的後端服務監聽自己的埠號，以避免衝突
