@@ -1,5 +1,5 @@
 /**
- * AudioAssuranceSystem - WebRTC 客戶端處理器 (版本 1.3 - 穩健的雙向通話)
+ * AudioAssuranceSystem - WebRTC 客戶端處理器
  *
  * 這個類別封裝了所有與 WebRTC 相關的複雜邏輯，包括：
  * 1. 連接到信令伺服器。
@@ -25,10 +25,16 @@ class WebRTCClient {
     this.peerConnection = null;
     this.localStream = null;
     this.remoteStream = null;
+
     this.iceServers = {
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
+        {
+          urls: "turn:openrelay.metered.ca:80",
+          username: "guest",
+          credential: "guest",
+        },
       ],
     };
   }

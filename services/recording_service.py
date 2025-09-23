@@ -103,9 +103,10 @@ class RecordingService:
                     logger.info("錄音服務: 房間 %s 已處理完畢並清理", room_id)
 
     def _load_audio_from_stream(self, stream_bytes: bytes) -> Optional[AudioSegment]:
-        """使用 FFmpeg 將 WebM 串流解碼為 pydub 的 AudioSegment 物件。"""
+        """使用 FFmpeg 將 WebM/Opus 音訊串流解碼為 pydub 物件。"""
         if not stream_bytes:
             return None
+
         command = [
             "ffmpeg",
             "-i",
@@ -122,55 +123,9 @@ class RecordingService:
                 command, input=stream_bytes, capture_output=True, check=True
             )
             return AudioSegment.from_file(io.BytesIO(process.stdout), format="wav")
-        except subprocess.CalledProcessError as e:
-            error_output = e.stderr.decode("utf-8", errors="ignore")
-            logger.error("FFmpeg 處理失敗。錯誤: %s", error_output)
-            raise IOError(f"FFmpeg 解碼失敗: {error_output}") from e
-        except FileNotFoundError:
-            logger.error("嚴重錯誤: FFmpeg 未安裝或未在系統 PATH 中。請安裝 FFmpeg。")
-            raise RuntimeError("FFmpeg 未安裝，無法處理音訊")
-
-    def _merge_to_stereo_with_ffmpeg(
-        self, agent_audio: AudioSegment, client_audio: AudioSegment
-    ) -> bytes:
-        """使用 FFmpeg 將兩個單聲道 AudioSegment 合併為一個立體聲 WAV 的 bytes。"""
-        agent_file, client_file, output_file = None, None, None
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f_agent:
-                agent_audio.export(f_agent.name, format="wav")
-                agent_file = f_agent.name
-
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f_client:
-                client_audio.export(f_client.name, format="wav")
-                client_file = f_client.name
-
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f_out:
-                output_file = f_out.name
-
-            command = [
-                "ffmpeg",
-                "-i",
-                agent_file,
-                "-i",
-                client_file,
-                "-filter_complex",
-                "[0:a][1:a]join=inputs=2:channel_layout=stereo",
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                "-y",
-                output_file,
-            ]
-            subprocess.run(command, check=True)
-
-            with open(output_file, "rb") as f:
-                stereo_bytes = f.read()
-
-            return stereo_bytes
-        finally:
-            for f in [agent_file, client_file, output_file]:
-                if f and Path(f).exists():
-                    Path(f).unlink()
+        except Exception as e:
+            logger.error("RecordingService 的 FFmpeg 解碼失敗: %s", e)
+            return None
 
     async def _process_and_save_audio(self, room_id: str):
         """核心處理邏輯：合併、短期歸檔，並觸發長期儲存與後續流程。"""
@@ -180,13 +135,10 @@ class RecordingService:
             if not room_handlers:
                 return
 
-            audio_segments_map = {
-                h.client_id: self._load_audio_from_stream(h.get_full_stream())
-                for h in room_handlers
-            }
-            valid_audio_segments = {
-                cid: seg for cid, seg in audio_segments_map.items() if seg is not None
-            }
+            audio_segments = [
+                self._load_audio_from_stream(h.get_full_stream()) for h in room_handlers
+            ]
+            valid_audio_segments = [seg for seg in audio_segments if seg is not None]
 
             if not valid_audio_segments:
                 logger.warning(
@@ -194,31 +146,21 @@ class RecordingService:
                 )
                 return
 
-            valid_segments_list = list(valid_audio_segments.values())
+            combined_audio = valid_audio_segments[0]
+            for seg in valid_audio_segments[1:]:
+                combined_audio = combined_audio.overlay(seg)
 
             with tempfile.NamedTemporaryFile(
                 delete=False, suffix=".wav", dir=settings.AUDIO_PATH
             ) as tmp:
                 temp_filepath = Path(tmp.name)
 
-            if len(valid_segments_list) >= 2:
-                agent_audio, client_audio = (
-                    valid_segments_list[0],
-                    valid_segments_list[1],
-                )
-                stereo_bytes = self._merge_to_stereo_with_ffmpeg(
-                    agent_audio, client_audio
-                )
-                save_audio_file(stereo_bytes, temp_filepath)
-                logger.info(f"錄音服務: 雙人通話音檔已短期歸檔至: {temp_filepath.name}")
-            else:
-                final_audio_segment = valid_segments_list[0]
-                output_buffer = io.BytesIO()
-                final_audio_segment.export(output_buffer, format="wav")
-                save_audio_file(output_buffer.getvalue(), temp_filepath)
-                logger.info(f"錄音服務: 單人通話音檔已短期歸檔至: {temp_filepath.name}")
+            output_buffer = io.BytesIO()
+            combined_audio.export(output_buffer, format="wav")
+            save_audio_file(output_buffer.getvalue(), temp_filepath)
+            logger.info(f"錄音服務: 錄音檔已短期歸檔至: {temp_filepath.name}")
 
-            participant_ids = list(valid_audio_segments.keys())
+            participant_ids = [h.client_id for h in room_handlers]
             recording_audio_file = storage_service.archive_audio(
                 source_path_str=str(temp_filepath),
                 call_session_id=room_id,

@@ -2,7 +2,7 @@
  * AudioAssuranceSystem - 通話介面主應用程式邏輯
  */
 document.addEventListener("DOMContentLoaded", () => {
-  // --- DOM 元素獲取 (維持不變) ---
+  // --- DOM 元素獲取 ---
   const setupSection = document.getElementById("setup-section");
   const callSection = document.getElementById("call-section");
   const incomingCallSection = document.getElementById("incoming-call-section");
@@ -20,14 +20,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const callerIdDisplay = document.getElementById("caller-id");
   const callStatusDisplay = document.getElementById("call-status");
 
-  // --- 應用程式狀態變數 (維持不變) ---
+  // --- 應用程式狀態變數 ---
   let webrtcClient = null;
   let webSocketStreamer = null;
   let roomId = "";
   let clientId = "";
   let pendingOffer = null;
 
-  // --- UI 更新函式 (維持不變) ---
+  // --- UI 更新函式 ---
   function logStatus(message) {
     const timestamp = new Date().toLocaleTimeString();
     statusDisplay.innerHTML =
@@ -111,7 +111,6 @@ document.addEventListener("DOMContentLoaded", () => {
         showIncomingCallUI(fromId);
       },
 
-      // --- *** 核心修改處 *** ---
       onRemoteStream: (stream) => {
         logStatus("收到遠端音訊串流，通話已連接！");
         updateCallStatus("active", "通話中");
@@ -134,7 +133,6 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
       },
-      // --- *** 修改結束 *** ---
 
       onError: (errorMessage) => {
         logStatus(`發生錯誤: ${errorMessage}`);
@@ -147,7 +145,6 @@ document.addEventListener("DOMContentLoaded", () => {
     webrtcClient.connect();
   }
 
-  // --- (其他 handle... 函式與 startStreaming 函式維持不變) ---
   async function handleStartCall() {
     if (!webrtcClient) return;
     callBtn.disabled = true;
@@ -215,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
     webSocketStreamer.start();
   }
 
-  // --- 綁定事件監聽器 (維持不變) ---
+  // --- 綁定事件監聽器 ---
   joinBtn.addEventListener("click", handleJoinRoom);
   callBtn.addEventListener("click", handleStartCall);
   answerBtn.addEventListener("click", handleAnswerCall);

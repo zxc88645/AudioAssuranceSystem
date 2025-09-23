@@ -105,9 +105,10 @@ class MonitoringService:
                     logger.info("監控服務: 房間 %s 已處理完畢並清理", room_id)
 
     def _load_audio_from_stream(self, stream_bytes: bytes) -> Optional[AudioSegment]:
-        """使用 FFmpeg 解碼音訊串流。"""
+        """使用 FFmpeg 將 WebM/Opus 音訊串流解碼為 pydub 物件。"""
         if not stream_bytes:
             return None
+
         command = [
             "ffmpeg",
             "-i",
@@ -125,7 +126,7 @@ class MonitoringService:
             )
             return AudioSegment.from_file(io.BytesIO(process.stdout), format="wav")
         except Exception as e:
-            logger.error("監控服務 FFmpeg 處理失敗: %s", e)
+            logger.error("MonitoringService 的 FFmpeg 解碼失敗: %s", e)
             return None
 
     async def _process_and_save_monitoring_audio(self, room_id: str):
@@ -160,12 +161,12 @@ class MonitoringService:
             output_buffer = io.BytesIO()
             combined_audio.export(output_buffer, format="wav")
             save_audio_file(output_buffer.getvalue(), temp_filepath)
-            logger.info(f"監控服務: 側錄音檔已短期歸檔至: {temp_filepath.name}")
+            logger.info("監控服務: 側錄音檔已短期歸檔至: %s", temp_filepath.name)
 
             participant_ids = [h.client_id for h in room_handlers]
             monitoring_audio_file = storage_service.archive_audio(
                 source_path_str=str(temp_filepath),
-                call_session_id=room_id,  # 使用與 recording_service 相同的 session_id
+                call_session_id=room_id,
                 participant_ids=participant_ids,
             )
 
