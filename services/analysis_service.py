@@ -1,5 +1,5 @@
 """
-AudioAssuranceSystem - 分析編排服務
+AudioAssuranceSystem - 分析編排服務 (版本 1.1 - 修正參數名稱)
 負責編排 STT 和 LLM 服務，對比音檔並生成分析報告。
 """
 
@@ -15,7 +15,6 @@ from models.call_models import (
     SttResult,
 )
 
-# 從您剛複製的檔案中匯入服務
 from services.llm_service import LLMService
 from services.stt_service import STTService
 
@@ -25,8 +24,6 @@ logger = logging.getLogger(__name__)
 class AnalysisService:
     """
     分析流程的總指揮官。
-    注意：目前的實作使用記憶體中的字典來儲存報告，
-    在正式產品中，應將 self.reports 替換為真實的資料庫操作。
     """
 
     def __init__(self):
@@ -34,7 +31,6 @@ class AnalysisService:
         try:
             self.stt_service = STTService()
             self.llm_service = LLMService()
-            # 模擬的報告資料庫
             self.reports: Dict[str, AnalysisReport] = {}
             logger.info("分析服務 (AnalysisService) 初始化完成")
         except Exception as e:
@@ -50,7 +46,6 @@ class AnalysisService:
         """
         建立一個新的分析報告任務，並在背景非同步執行它。
         """
-        # 1. 立即建立一個 PENDING 狀態的報告，讓系統知道任務已存在
         report = AnalysisReport(
             call_session_id=call_session_id,
             status=AnalysisStatus.PENDING,
@@ -60,7 +55,6 @@ class AnalysisService:
             "已為通話 %s 建立分析任務，ID: %s", call_session_id, report.report_id
         )
 
-        # 2. 將耗時的 AI 分析過程交給背景執行，避免阻塞主流程
         asyncio.create_task(
             self._run_analysis_pipeline(report, recording_file, monitoring_file)
         )
@@ -80,15 +74,12 @@ class AnalysisService:
 
             # --- STT 階段：並行處理兩個音檔 ---
             logger.info("分析任務 %s：開始 STT 轉錄...", report.report_id)
-
-            # 使用 asyncio.gather 來同時執行兩個 STT 任務，提升效率
             stt_tasks = [
                 self.stt_service.transcribe_audio(recording_file.file_path),
                 self.stt_service.transcribe_audio(monitoring_file.file_path),
             ]
             results = await asyncio.gather(*stt_tasks, return_exceptions=True)
 
-            # 處理 STT 結果
             if isinstance(results[0], Exception) or isinstance(results[1], Exception):
                 raise RuntimeError(f"STT 轉錄失敗: {results}")
 
@@ -101,12 +92,12 @@ class AnalysisService:
 
             # --- LLM 階段：比對兩份轉錄稿 ---
             logger.info("分析任務 %s：開始 LLM 比對...", report.report_id)
+
             llm_raw_result = await self.llm_service.analyze_conversation(
-                original_script=transcript_recording,  # 以系統一的錄音稿為基準
-                transcribed_text=transcript_monitoring,
+                recording_transcript=transcript_recording,
+                monitoring_transcript=transcript_monitoring,
             )
 
-            # 將 LLM 回傳的字典轉換為 Pydantic 模型
             report.llm_analysis = LlmAnalysisResult(**llm_raw_result)
             logger.info(
                 "分析任務 %s：LLM 比對完成，準確率: %.1f%%",
