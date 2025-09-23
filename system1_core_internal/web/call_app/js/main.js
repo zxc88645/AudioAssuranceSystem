@@ -119,7 +119,6 @@ document.addEventListener("DOMContentLoaded", () => {
           remoteAudio.srcObject = stream;
         }
 
-        // 嘗試播放音訊，並處理瀏覽器可能的回絕
         const playPromise = remoteAudio.play();
         if (playPromise !== undefined) {
           playPromise
@@ -129,7 +128,6 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch((error) => {
               console.error("自動播放失敗:", error);
               logStatus("警告：瀏覽器阻止了音訊自動播放。請手動點擊播放按鈕。");
-              // 您可以在此處顯示一個 UI 提示，讓使用者手動點擊
             });
         }
       },
@@ -203,11 +201,21 @@ document.addEventListener("DOMContentLoaded", () => {
   function startStreaming(stream) {
     logStatus("正在準備將音訊串流到後端...");
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.host;
+
+    // 系統一 (錄音服務) 的主機位址。
+    const system1Host = window.location.host;
+
+    // 系統二 (監控服務) 的主機位址。
+    const system2Host = "localhost:8005";
+
     const endpoints = {
-      recordingUrl: `${protocol}//${host}/ws/recording/${roomId}/${clientId}`,
-      monitoringUrl: `${protocol}//${host}/ws/monitoring/${roomId}/${clientId}`,
+      recordingUrl: `${protocol}//${system1Host}/ws/recording/${roomId}/${clientId}`,
+      monitoringUrl: `${protocol}//${system2Host}/ws/monitoring/${roomId}/${clientId}`,
     };
+
+    logStatus(`錄音串流將發送到: ${endpoints.recordingUrl}`);
+    logStatus(`監控串流將發送到: ${endpoints.monitoringUrl}`);
+
     webSocketStreamer = new WebSocketStreamer(stream, endpoints);
     webSocketStreamer.start();
   }
