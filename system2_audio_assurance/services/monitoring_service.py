@@ -2,7 +2,6 @@
 AudioAssuranceSystem - 品質監控服務 (系統二版本)
 """
 
-# ... (所有 import 維持不變)
 import asyncio
 import io
 import logging

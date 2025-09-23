@@ -1,5 +1,5 @@
 """
-AudioAssuranceSystem - WebRTC 信令服務 (版本 1.1 - 附加發送者ID)
+AudioAssuranceSystem - WebRTC 信令服務
 """
 
 import asyncio

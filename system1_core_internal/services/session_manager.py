@@ -47,9 +47,6 @@ class CallSessionManager:
         # 觸發通知流程
         await self._notify_assurance_system(session_id, audio_file)
 
-    # --- *** 核心修改處 1：移除 set_monitoring_file *** ---
-    # (set_monitoring_file 函式已被刪除)
-
     async def _notify_assurance_system(self, session_id: str, audio_file: AudioFile):
         """
         當正式錄音檔準備好後，透過 API 通知品質保障系統 (系統二)。

@@ -1,5 +1,3 @@
-# services/storage_service.py
-
 """
 AudioAssuranceSystem - 長期音檔儲存服務
 負責將已完成的錄音檔進行永久歸檔，並管理其後設資料 (Metadata)。
