@@ -2,7 +2,6 @@
  * AudioAssuranceSystem - 通話介面主應用程式邏輯
  */
 document.addEventListener("DOMContentLoaded", () => {
-  // --- DOM 元素獲取 ---
   const setupSection = document.getElementById("setup-section");
   const callSection = document.getElementById("call-section");
   const incomingCallSection = document.getElementById("incoming-call-section");
@@ -20,19 +19,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const callerIdDisplay = document.getElementById("caller-id");
   const callStatusDisplay = document.getElementById("call-status");
 
-  // --- 應用程式狀態變數 ---
-  let webrtcClient = null;
-  let webSocketStreamer = null;
-  let roomId = "";
-  let clientId = "";
-  let pendingOffer = null;
+  let webrtcClient = null,
+    webSocketStreamer = null,
+    audioMixer = null;
+  let roomId = "",
+    clientId = "",
+    pendingOffer = null,
+    localStream = null;
 
-  // --- UI 更新函式 ---
   function logStatus(message) {
     const timestamp = new Date().toLocaleTimeString();
     statusDisplay.innerHTML =
       `[${timestamp}] ${message}\n` + statusDisplay.innerHTML;
-    console.log(`[Status] ${message}`);
   }
 
   function updateCallStatus(status, text) {
@@ -68,27 +66,19 @@ document.addEventListener("DOMContentLoaded", () => {
     joinBtn.disabled = false;
     remoteAudio.srcObject = null;
     updateCallStatus("waiting", "等待中...");
-    logStatus("已重設介面，請重新加入房間。");
   }
-
-  // --- 事件處理函式 ---
 
   function handleJoinRoom() {
     roomId = roomIdInput.value.trim();
     clientId = clientIdInput.value.trim();
-    if (!roomId || !clientId) {
-      alert("房間 ID 和您的 ID 均不可為空");
-      return;
-    }
-
+    if (!roomId || !clientId) return alert("房間 ID 和您的 ID 均不可為空");
     joinBtn.disabled = true;
-    logStatus("正在嘗試加入房間...");
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.host;
-    const signalingUrl = `${protocol}//${host}/ws/signaling/${roomId}/${clientId}`;
+    const signalingUrl = `${
+      window.location.protocol === "https:" ? "wss:" : "ws:"
+    }//${window.location.host}/ws/signaling/${roomId}/${clientId}`;
 
-    const eventHandlers = {
+    webrtcClient = new WebRTCClient(signalingUrl, {
       onReady: () => {
         logStatus(`成功加入房間 [${roomId}]`);
         displayRoomId.textContent = roomId;
@@ -98,48 +88,37 @@ document.addEventListener("DOMContentLoaded", () => {
         hangupBtn.disabled = false;
       },
       onPeerJoined: (peerId) => {
-        logStatus(`對等方 [${peerId}] 已加入房間，可以發起通話`);
+        logStatus(`對等方 [${peerId}] 已加入，可以發起通話`);
         callBtn.disabled = false;
       },
       onPeerLeft: (peerId) => {
-        logStatus(`對等方 [${peerId}] 已離開房間`);
+        logStatus(`對等方 [${peerId}] 已離開`);
         handleHangup();
       },
-      onOffer: (offerMessage, fromId) => {
-        pendingOffer = offerMessage;
-        logStatus(`收到來自 [${fromId}] 的通話請求`);
+      onOffer: (offer, fromId) => {
+        pendingOffer = offer;
         showIncomingCallUI(fromId);
       },
-
-      onRemoteStream: (stream) => {
+      onRemoteStream: (remoteStream) => {
         logStatus("收到遠端音訊串流，通話已連接！");
         updateCallStatus("active", "通話中");
-
-        if (remoteAudio.srcObject !== stream) {
-          remoteAudio.srcObject = stream;
+        if (remoteAudio.srcObject !== remoteStream) {
+          remoteAudio.srcObject = remoteStream;
+          remoteAudio.play().catch((e) => console.warn("音訊自動播放被阻止"));
         }
-
-        const playPromise = remoteAudio.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then((_) => {
-              logStatus("遠端音訊已成功播放。");
-            })
-            .catch((error) => {
-              console.error("自動播放失敗:", error);
-              logStatus("警告：瀏覽器阻止了音訊自動播放。請手動點擊播放按鈕。");
-            });
+        if (localStream && remoteStream) {
+          logStatus("本地與遠端音訊均已就緒，開始數位混合並錄製...");
+          audioMixer = new AudioMixer();
+          audioMixer.addStream(localStream);
+          audioMixer.addStream(remoteStream);
+          startStreaming(audioMixer.getMixedStream());
         }
       },
-
-      onError: (errorMessage) => {
-        logStatus(`發生錯誤: ${errorMessage}`);
-        alert(`發生錯誤: ${errorMessage}`);
+      onError: (error) => {
+        logStatus(`發生錯誤: ${error}`);
         resetUI();
       },
-    };
-
-    webrtcClient = new WebRTCClient(signalingUrl, eventHandlers);
+    });
     webrtcClient.connect();
   }
 
@@ -147,11 +126,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!webrtcClient) return;
     callBtn.disabled = true;
     updateCallStatus("calling", "撥號中...");
-    logStatus("--- 發起通話流程 ---");
     try {
       webrtcClient.createPeerConnection();
-      const localStream = await webrtcClient.startLocalStream();
-      startStreaming(localStream);
+      localStream = await webrtcClient.startLocalStream();
       webrtcClient.addLocalStreamToConnection();
       await webrtcClient.createOffer();
     } catch (error) {
@@ -166,22 +143,18 @@ document.addEventListener("DOMContentLoaded", () => {
     hideIncomingCallUI();
     showActiveCallUI();
     updateCallStatus("calling", "連接中...");
-    logStatus("--- 接聽通話流程 ---");
     try {
       webrtcClient.createPeerConnection();
-      const localStream = await webrtcClient.startLocalStream();
-      startStreaming(localStream);
+      localStream = await webrtcClient.startLocalStream();
       webrtcClient.addLocalStreamToConnection();
       await webrtcClient.createAnswer(pendingOffer);
       pendingOffer = null;
     } catch (error) {
       logStatus(`回覆通話失敗: ${error.message}`);
-      updateCallStatus("waiting", "接聽失敗");
     }
   }
 
   function handleDeclineCall() {
-    logStatus("已拒絕來電");
     hideIncomingCallUI();
     pendingOffer = null;
   }
@@ -191,36 +164,28 @@ document.addEventListener("DOMContentLoaded", () => {
       webSocketStreamer.stop();
       webSocketStreamer = null;
     }
+    if (audioMixer) {
+      audioMixer.close();
+      audioMixer = null;
+    }
     if (webrtcClient) {
       webrtcClient.closeConnection();
     }
+    localStream = null;
     webrtcClient = null;
     resetUI();
   }
 
   function startStreaming(stream) {
-    logStatus("正在準備將音訊串流到後端...");
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-
-    // 系統一 (錄音服務) 的主機位址。
-    const system1Host = window.location.host;
-
-    // 系統二 (監控服務) 的主機位址。
-    const system2Host = "localhost:8005";
-
     const endpoints = {
-      recordingUrl: `${protocol}//${system1Host}/ws/recording/${roomId}/${clientId}`,
-      monitoringUrl: `${protocol}//${system2Host}/ws/monitoring/${roomId}/${clientId}`,
+      recordingUrl: `${protocol}//${window.location.host}/ws/recording/${roomId}/${clientId}`,
+      monitoringUrl: `${protocol}//localhost:8005/ws/monitoring/${roomId}/${clientId}`,
     };
-
-    logStatus(`錄音串流將發送到: ${endpoints.recordingUrl}`);
-    logStatus(`監控串流將發送到: ${endpoints.monitoringUrl}`);
-
     webSocketStreamer = new WebSocketStreamer(stream, endpoints);
     webSocketStreamer.start();
   }
 
-  // --- 綁定事件監聽器 ---
   joinBtn.addEventListener("click", handleJoinRoom);
   callBtn.addEventListener("click", handleStartCall);
   answerBtn.addEventListener("click", handleAnswerCall);

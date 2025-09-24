@@ -1,5 +1,5 @@
 """
-AudioAssuranceSystem - 內部錄音服務
+AudioAssuranceSystem - 內部錄音服務 (最終版)
 """
 
 import asyncio
@@ -51,7 +51,6 @@ class RecordingService:
     async def handle_new_connection(
         self, websocket: WebSocket, room_id: str, client_id: str
     ):
-        """處理新的 WebSocket 連線，為其建立一個音訊串流處理器。"""
         if room_id not in self._processing_locks:
             self._processing_locks[room_id] = asyncio.Lock()
 
@@ -74,8 +73,6 @@ class RecordingService:
             await self.handle_disconnection(room_id, client_id)
 
     async def handle_disconnection(self, room_id: str, client_id: str):
-        """處理客戶端斷線，並在房間變空時觸發音檔處理流程。"""
-        
         if room_id not in self.rooms or client_id not in self.rooms[room_id]:
             return
 
@@ -104,19 +101,19 @@ class RecordingService:
                     logger.info("錄音服務: 房間 %s 已處理完畢並清理", room_id)
 
     def _load_audio_from_stream(self, stream_bytes: bytes) -> Optional[AudioSegment]:
-        """使用 FFmpeg 將 WebM/Opus 音訊串流解碼為 pydub 物件。"""
+        """使用 FFmpeg 將串流解碼、降噪並標準化。"""
         if not stream_bytes:
             return None
 
         command = [
             "ffmpeg",
-            "-i",
-            "pipe:0",
-            "-f",
-            "wav",
+            "-i", "pipe:0",
+            "-af", "anlmdn",
+            "-ac", "1",
+            "-ar", "16000",
+            "-f", "wav",
             "-hide_banner",
-            "-loglevel",
-            "error",
+            "-loglevel", "error",
             "pipe:1",
         ]
         try:
@@ -124,32 +121,41 @@ class RecordingService:
                 command, input=stream_bytes, capture_output=True, check=True
             )
             return AudioSegment.from_file(io.BytesIO(process.stdout), format="wav")
+        except subprocess.CalledProcessError as e:
+            logger.error("FFmpeg 解碼失敗，返回碼: %d", e.returncode)
+            logger.error("FFmpeg Stderr: %s", e.stderr.decode('utf-8', errors='ignore'))
+            return None
         except Exception as e:
-            logger.error("RecordingService 的 FFmpeg 解碼失敗: %s", e)
+            logger.error("在 FFmpeg 解碼過程中發生未知錯誤: %s", e)
             return None
 
     async def _process_and_save_audio(self, room_id: str):
-        """核心處理邏輯：合併、短期歸檔，並觸發長期儲存與後續流程。"""
+        """核心處理邏輯：合併、正規化、歸檔。"""
         temp_filepath = None
         try:
             room_handlers = list(self.rooms.get(room_id, {}).values())
             if not room_handlers:
+                logger.warning("錄音服務: 房間 %s 未找到任何串流處理器。", room_id)
                 return
 
-            audio_segments = [
-                self._load_audio_from_stream(h.get_full_stream()) for h in room_handlers
-            ]
-            valid_audio_segments = [seg for seg in audio_segments if seg is not None]
+            handler = room_handlers[0]
+            if handler.chunk_count == 0:
+                 logger.warning("錄音服務: 房間 %s 未收到有效音訊塊，不建立錄音檔。", room_id)
+                 return
 
-            if not valid_audio_segments:
-                logger.warning(
-                    "錄音服務: 房間 %s 未收到有效音訊，不建立錄音檔。", room_id
-                )
+            mixed_audio_segment = self._load_audio_from_stream(handler.get_full_stream())
+            
+            if not mixed_audio_segment:
+                logger.warning("錄音服務: 房間 %s 解碼後的音訊為空。", room_id)
                 return
 
-            combined_audio = valid_audio_segments[0]
-            for seg in valid_audio_segments[1:]:
-                combined_audio = combined_audio.overlay(seg)
+            # 音量正規化
+            if mixed_audio_segment.dBFS != float('-inf'):
+                target_dbfs = -20.0
+                change_in_dbfs = target_dbfs - mixed_audio_segment.dBFS
+                final_audio = mixed_audio_segment.apply_gain(change_in_dbfs)
+            else:
+                final_audio = mixed_audio_segment
 
             with tempfile.NamedTemporaryFile(
                 delete=False, suffix=".wav", dir=settings.AUDIO_PATH
@@ -157,8 +163,18 @@ class RecordingService:
                 temp_filepath = Path(tmp.name)
 
             output_buffer = io.BytesIO()
-            combined_audio.export(output_buffer, format="wav")
-            save_audio_file(output_buffer.getvalue(), temp_filepath)
+            final_audio.export(output_buffer, format="wav")
+            audio_data = output_buffer.getvalue()
+
+            if len(audio_data) < 1024:
+                logger.warning(
+                    "錄音服務: 房間 %s 最終音檔過小 (%d bytes)，可能為空或無效。",
+                    room_id,
+                    len(audio_data),
+                )
+                return
+
+            save_audio_file(audio_data, temp_filepath)
             logger.info(f"錄音服務: 錄音檔已短期歸檔至: {temp_filepath.name}")
 
             participant_ids = [h.client_id for h in room_handlers]
@@ -168,7 +184,9 @@ class RecordingService:
                 participant_ids=participant_ids,
             )
 
-            await call_session_manager.set_recording_file(room_id, recording_audio_file)
+            await call_session_manager.set_recording_file(
+                room_id, recording_audio_file
+            )
 
         except Exception as e:
             logger.error(
@@ -178,7 +196,6 @@ class RecordingService:
             if temp_filepath and temp_filepath.exists():
                 try:
                     temp_filepath.unlink()
-                    logger.info("錄音服務: 已清理短期歸檔檔案: %s", temp_filepath.name)
                 except OSError as e:
                     logger.error(
                         "錄音服務: 清理短期歸檔檔案 %s 失敗: %s", temp_filepath.name, e

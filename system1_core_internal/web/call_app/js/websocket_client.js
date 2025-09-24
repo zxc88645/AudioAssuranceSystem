@@ -16,12 +16,8 @@ class WebSocketStreamer {
   }
 
   start() {
-    if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
-      console.warn("[WS Streamer] 串流已在進行中");
-      return;
-    }
+    if (this.mediaRecorder && this.mediaRecorder.state === "recording") return;
 
-    console.log("[WS Streamer] 準備開始串流...");
     this.sockets = [
       this._createSocket(this.endpoints.recordingUrl, "Recording"),
       this._createSocket(this.endpoints.monitoringUrl, "Monitoring"),
@@ -29,36 +25,12 @@ class WebSocketStreamer {
 
     Promise.all(this.sockets.map((sw) => sw.connectionPromise))
       .then(() => {
-        console.log(
-          "[WS Streamer] 所有 WebSocket 已連接，準備啟動 MediaRecorder"
-        );
-
         try {
           const options = { mimeType: "audio/webm;codecs=opus" };
-          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-            console.warn(
-              `[WS Streamer] 不支援 ${options.mimeType}，嘗試預設選項。`
-            );
-            delete options.mimeType;
-          }
           this.mediaRecorder = new MediaRecorder(this.stream, options);
-          console.log(
-            `[WS Streamer] MediaRecorder 成功建立，使用 mimeType: ${this.mediaRecorder.mimeType}`
-          );
-
-          this.mediaRecorder.onstart = () => {
-            console.log(
-              "[WS Streamer] MediaRecorder 'start' 事件觸發，狀態:",
-              this.mediaRecorder.state
-            );
-          };
 
           this.mediaRecorder.ondataavailable = (event) => {
             this.chunkCount++;
-            console.log(
-              `[WS Streamer] MediaRecorder 'dataavailable' 事件觸發 (第 ${this.chunkCount} 次)，數據大小: ${event.data.size} bytes`
-            );
-
             if (event.data.size > 0) {
               this.sockets.forEach((socketWrapper) => {
                 if (socketWrapper.socket.readyState === WebSocket.OPEN) {
@@ -66,12 +38,6 @@ class WebSocketStreamer {
                 }
               });
             }
-          };
-
-          this.mediaRecorder.onstop = () => {
-            console.log(
-              `[WS Streamer] MediaRecorder 'stop' 事件觸發，狀態: ${this.mediaRecorder.state}。總共觸發 dataavailable ${this.chunkCount} 次。`
-            );
           };
 
           this.mediaRecorder.onerror = (event) => {
@@ -92,36 +58,26 @@ class WebSocketStreamer {
   }
 
   stop() {
-    if (
-      this.mediaRecorder &&
-      (this.mediaRecorder.state === "recording" ||
-        this.mediaRecorder.state === "paused")
-    ) {
+    if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
+      this.mediaRecorder.onstop = () => {
+        const closingDelay = 3000;
+        console.log(
+          `[WS Streamer] MediaRecorder 'stop' 事件觸發，等待 ${closingDelay}ms 以確保最後的音訊塊已發送...`
+        );
+        setTimeout(() => {
+          this.sockets.forEach((socketWrapper) => {
+            if (socketWrapper.socket.readyState === WebSocket.OPEN) {
+              socketWrapper.socket.close();
+            }
+          });
+          this.sockets = [];
+        }, closingDelay);
+      };
       this.mediaRecorder.stop();
-      console.log(
-        "[WS Streamer] MediaRecorder 已停止，延遲 500ms 後關閉 WebSocket..."
-      );
-
-      // 延遲關閉，給予最後一塊音訊足夠的傳送時間
-      setTimeout(() => {
-        this.sockets.forEach((socketWrapper) => {
-          if (socketWrapper.socket.readyState === WebSocket.OPEN) {
-            socketWrapper.socket.close();
-          }
-        });
-        this.sockets = [];
-        console.log("[WS Streamer] WebSocket 連線已在延遲後關閉");
-      }, 500); // 延遲 500 毫秒
     } else {
-      console.warn(
-        "[WS Streamer] stop() 被呼叫，但 MediaRecorder 未在錄製中。狀態:",
-        this.mediaRecorder ? this.mediaRecorder.state : "null"
-      );
-      // 如果沒有在錄製，則直接關閉
       this.sockets.forEach((socketWrapper) => {
-        if (socketWrapper.socket.readyState === WebSocket.OPEN) {
+        if (socketWrapper.socket.readyState === WebSocket.OPEN)
           socketWrapper.socket.close();
-        }
       });
       this.sockets = [];
     }
@@ -141,7 +97,7 @@ class WebSocketStreamer {
       };
       socket.onclose = (event) => {
         console.log(
-          `[WS Streamer] ${name} WebSocket 已關閉. Code: ${event.code}, Reason: ${event.reason}`
+          `[WS Streamer] ${name} WebSocket 已關閉. Code: ${event.code}`
         );
       };
     });
