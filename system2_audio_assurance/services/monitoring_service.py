@@ -17,13 +17,12 @@ from pydub import AudioSegment
 from config.settings import settings
 from utils.audio_utils import save_audio_file
 from services.storage_service import storage_service
-from services.analysis_coordinator import analysis_coordinator  # 替換 session_manager
+from services.analysis_coordinator import analysis_coordinator
 
 logger = logging.getLogger(__name__)
 
 
 class MonitoringStreamHandler:
-    # ... (這個 class 維持不變)
     def __init__(self, room_id: str, client_id: str):
         self.room_id = room_id
         self.client_id = client_id
@@ -41,7 +40,6 @@ class MonitoringStreamHandler:
 
 
 class MonitoringService:
-    # ... ( __init__ 和 handle_new_connection 維持不變)
     def __init__(self):
         self.rooms: DefaultDict[str, Dict[str, MonitoringStreamHandler]] = defaultdict(
             dict
@@ -70,7 +68,6 @@ class MonitoringService:
         finally:
             await self.handle_disconnection(room_id, client_id)
 
-    # (handle_disconnection 和 _load_audio_from_stream 維持不變)
     async def handle_disconnection(self, room_id: str, client_id: str):
         if room_id not in self.rooms or client_id not in self.rooms[room_id]:
             return
@@ -124,7 +121,6 @@ class MonitoringService:
         """核心處理邏輯：合併、歸檔，並通知協調器。"""
         temp_filepath = None
         try:
-            # ... (前半段邏輯不變：合併、儲存音檔)
             room_handlers = list(self.rooms.get(room_id, {}).values())
             if not room_handlers:
                 return
@@ -153,12 +149,9 @@ class MonitoringService:
                 participant_ids=participant_ids,
             )
 
-            # --- *** 核心修改處：通知協調器 *** ---
-            # 將產出的 AudioFile 物件傳遞給協調器
             await analysis_coordinator.set_monitoring_file(
                 room_id, monitoring_audio_file
             )
-            # --- *** 修改結束 *** ---
 
         except Exception as e:
             logger.error(

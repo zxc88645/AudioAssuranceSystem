@@ -75,6 +75,7 @@ class RecordingService:
 
     async def handle_disconnection(self, room_id: str, client_id: str):
         """處理客戶端斷線，並在房間變空時觸發音檔處理流程。"""
+        
         if room_id not in self.rooms or client_id not in self.rooms[room_id]:
             return
 

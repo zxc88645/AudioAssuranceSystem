@@ -40,10 +40,7 @@ class Settings:
 
     # --- 路徑設定 ---
     BASE_DIR: Path = BASE_DIR
-    # 指向一個獨立的儲存目錄
-    STORAGE_PATH: Path = Path(
-        os.getenv("STORAGE_PATH", str(BASE_DIR / "storage_system2"))
-    )
+    STORAGE_PATH: Path = (BASE_DIR / os.getenv("STORAGE_PATH", "storage")).resolve()
     AUDIO_PATH: Path = STORAGE_PATH / "audio"
 
     @classmethod

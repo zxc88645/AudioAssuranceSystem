@@ -151,9 +151,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       webrtcClient.createPeerConnection();
       const localStream = await webrtcClient.startLocalStream();
+      startStreaming(localStream);
       webrtcClient.addLocalStreamToConnection();
       await webrtcClient.createOffer();
-      startStreaming(localStream);
     } catch (error) {
       logStatus(`發起通話失敗: ${error.message}`);
       updateCallStatus("waiting", "發起失敗");
@@ -170,9 +170,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       webrtcClient.createPeerConnection();
       const localStream = await webrtcClient.startLocalStream();
+      startStreaming(localStream);
       webrtcClient.addLocalStreamToConnection();
       await webrtcClient.createAnswer(pendingOffer);
-      startStreaming(localStream);
       pendingOffer = null;
     } catch (error) {
       logStatus(`回覆通話失敗: ${error.message}`);

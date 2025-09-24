@@ -1,5 +1,5 @@
 /**
- * AudioAssuranceSystem - WebSocket 音訊串流客戶端 (版本 1.2 - 偵錯版)
+ * AudioAssuranceSystem - WebSocket 音訊串流客戶端
  */
 class WebSocketStreamer {
   constructor(stream, endpoints) {
@@ -12,7 +12,7 @@ class WebSocketStreamer {
     this.mediaRecorder = null;
     this.sockets = [];
     this.timeslice = 250;
-    this.chunkCount = 0; // 新增：用於計算發送的數據塊數量
+    this.chunkCount = 0;
   }
 
   start() {
@@ -46,7 +46,6 @@ class WebSocketStreamer {
             `[WS Streamer] MediaRecorder 成功建立，使用 mimeType: ${this.mediaRecorder.mimeType}`
           );
 
-          // --- *** 核心偵錯日誌 (1/3) *** ---
           this.mediaRecorder.onstart = () => {
             console.log(
               "[WS Streamer] MediaRecorder 'start' 事件觸發，狀態:",
@@ -55,7 +54,6 @@ class WebSocketStreamer {
           };
 
           this.mediaRecorder.ondataavailable = (event) => {
-            // --- *** 核心偵錯日誌 (2/3) *** ---
             this.chunkCount++;
             console.log(
               `[WS Streamer] MediaRecorder 'dataavailable' 事件觸發 (第 ${this.chunkCount} 次)，數據大小: ${event.data.size} bytes`
@@ -100,20 +98,33 @@ class WebSocketStreamer {
         this.mediaRecorder.state === "paused")
     ) {
       this.mediaRecorder.stop();
+      console.log(
+        "[WS Streamer] MediaRecorder 已停止，延遲 500ms 後關閉 WebSocket..."
+      );
+
+      // 延遲關閉，給予最後一塊音訊足夠的傳送時間
+      setTimeout(() => {
+        this.sockets.forEach((socketWrapper) => {
+          if (socketWrapper.socket.readyState === WebSocket.OPEN) {
+            socketWrapper.socket.close();
+          }
+        });
+        this.sockets = [];
+        console.log("[WS Streamer] WebSocket 連線已在延遲後關閉");
+      }, 500); // 延遲 500 毫秒
     } else {
       console.warn(
         "[WS Streamer] stop() 被呼叫，但 MediaRecorder 未在錄製中。狀態:",
         this.mediaRecorder ? this.mediaRecorder.state : "null"
       );
+      // 如果沒有在錄製，則直接關閉
+      this.sockets.forEach((socketWrapper) => {
+        if (socketWrapper.socket.readyState === WebSocket.OPEN) {
+          socketWrapper.socket.close();
+        }
+      });
+      this.sockets = [];
     }
-
-    this.sockets.forEach((socketWrapper) => {
-      if (socketWrapper.socket.readyState === WebSocket.OPEN) {
-        socketWrapper.socket.close();
-      }
-    });
-    this.sockets = [];
-    console.log("[WS Streamer] 所有 WebSocket 連線已請求關閉");
   }
 
   _createSocket(url, name) {
