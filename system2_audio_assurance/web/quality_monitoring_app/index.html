@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>品質監控儀表板 - AudioAssuranceSystem</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>品質監控儀表板 (系統二)</h1>
+        <p>檢視所有通話錄音的自動化分析報告</p>
+      </header>
+
+      <main id="main-content" class="main-content">
+        <section id="list-view" class="card">
+          <h2>分析報告總覽</h2>
+          <div class="table-container">
+            <table id="reports-table">
+              <thead>
+                <tr>
+                  <th>報告 ID</th>
+                  <th>通話 Session ID</th>
+                  <th>分析狀態</th>
+                  <th>準確率分數</th>
+                  <th>完成時間</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="reports-tbody"></tbody>
+            </table>
+            <p id="no-reports-message" class="hidden">目前沒有任何分析報告。</p>
+          </div>
+        </section>
+
+        <section id="detail-view" class="hidden">
+          <button id="back-to-list-btn" class="btn btn-secondary">
+            &larr; 返回列表
+          </button>
+
+          <div class="card report-header">
+            <h3>報告詳情</h3>
+            <p><strong>報告 ID:</strong> <span id="detail-report-id"></span></p>
+            <p>
+              <strong>通話 Session ID:</strong>
+              <span id="detail-session-id"></span>
+            </p>
+          </div>
+
+          <div class="card">
+            <h3>LLM 分析結果</h3>
+            <div class="llm-summary">
+              <div id="detail-accuracy-score" class="score-badge"></div>
+              <p id="detail-summary"></p>
+            </div>
+            <div class="llm-details">
+              <p>
+                <strong>評分理由:</strong> <span id="detail-reasoning"></span>
+              </p>
+              <p><strong>關鍵語意差異:</strong></p>
+              <ul id="detail-key-differences"></ul>
+              <p><strong>系統改進建議:</strong></p>
+              <ul id="detail-suggestions"></ul>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>音檔播放與比對</h3>
+            <div class="audio-comparison">
+              <div class="audio-player-wrapper">
+                <h4>官方錄音檔 (System 1)</h4>
+                <audio id="recording-audio-player" controls></audio>
+              </div>
+              <div class="audio-player-wrapper">
+                <h4>監控側錄檔 (System 2)</h4>
+                <audio id="monitoring-audio-player" controls></audio>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>語音轉文字 (STT) 內容對比</h3>
+            <div class="stt-comparison">
+              <div class="transcript-panel">
+                <h4>官方錄音轉錄稿</h4>
+                <div id="recording-transcript" class="transcript-content"></div>
+              </div>
+              <div class="transcript-panel">
+                <h4>監控錄音轉錄稿</h4>
+                <div
+                  id="monitoring-transcript"
+                  class="transcript-content"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/main.js"></script>
+  </body>
+</html>

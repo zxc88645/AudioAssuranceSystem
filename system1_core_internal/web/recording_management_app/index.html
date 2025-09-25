@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>錄音檔管理 - AudioAssuranceSystem</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>錄音檔管理介面 (系統一)</h1>
+        <p>檢視、播放與下載所有已歸檔的通話錄音</p>
+      </header>
+
+      <main class="main-content">
+        <section class="card">
+          <div class="controls">
+            <input
+              type="text"
+              id="search-input"
+              placeholder="依通話 Session ID 或參與者 ID 搜尋..."
+            />
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="table-container">
+            <table id="recordings-table">
+              <thead>
+                <tr>
+                  <th>通話 Session ID</th>
+                  <th>參與者</th>
+                  <th>錄音時長</th>
+                  <th>檔案大小</th>
+                  <th>歸檔時間</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="recordings-tbody"></tbody>
+            </table>
+            <p id="no-data-message" class="hidden">
+              找不到錄音檔或後端 API 尚未就緒。
+            </p>
+          </div>
+        </section>
+
+        <section class="card audio-player-container">
+          <h2>音訊播放器</h2>
+          <p id="current-playing-file">請選擇一筆錄音進行播放</p>
+          <audio id="audio-player" controls></audio>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/main.js"></script>
+  </body>
+</html>

@@ -45,13 +45,14 @@ def print_startup_info():
     print(f"🔧 模式: {'DEBUG' if settings.DEBUG else 'PRODUCTION'}")
     print(f"💾 儲存路徑: {settings.STORAGE_PATH}")
     print("\n--- 後端服務 (System 2) ---")
-    # 系統二現在只提供這些服務
     print(f"📊 監控 (Monitoring): ws://localhost:{settings.DASHBOARD_API_PORT}")
     print(f"📈 分析 API (HTTP): http://localhost:{settings.DASHBOARD_API_PORT}")
     print("\n--- 前端應用 (Provided by System 2) ---")
+    
     print(
-        f"📋 儀表板: http://localhost:{settings.DASHBOARD_API_PORT}/dashboard/index.html"
+        f"📋 品質監控儀表板: http://localhost:{settings.DASHBOARD_API_PORT}/"
     )
+    
     print("=" * 60 + "\n")
 
 

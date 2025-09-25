@@ -1,0 +1,156 @@
+/* AudioAssuranceSystem - 錄音檔管理介面 CSS */
+
+:root {
+  --primary-color: #007bff;
+  --light-gray: #f8f9fa;
+  --medium-gray: #e9ecef;
+  --dark-gray: #343a40;
+  --text-color: #212529;
+  --border-radius: 8px;
+  --box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.6;
+  background-color: var(--light-gray);
+  color: var(--text-color);
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  overflow: hidden;
+}
+
+.header {
+  background-color: var(--dark-gray);
+  color: white;
+  padding: 20px 30px;
+  text-align: center;
+}
+
+.header h1 {
+  margin: 0 0 5px 0;
+  font-size: 1.8em;
+}
+
+.header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.main-content {
+  padding: 25px;
+}
+
+.card {
+  background-color: #ffffff;
+  border: 1px solid var(--medium-gray);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.controls {
+  margin-bottom: 15px;
+}
+
+#search-input {
+  width: 100%;
+  padding: 12px;
+  font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+#recordings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+
+#recordings-table th,
+#recordings-table td {
+  padding: 12px 15px;
+  border: 1px solid var(--medium-gray);
+  text-align: left;
+  vertical-align: middle;
+}
+
+#recordings-table thead {
+  background-color: var(--light-gray);
+}
+
+#recordings-table th {
+  font-weight: bold;
+}
+
+#recordings-table tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+.actions-cell button,
+.actions-cell a {
+  display: inline-block;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9em;
+  cursor: pointer;
+  text-decoration: none;
+  margin-right: 5px;
+  color: white;
+  text-align: center;
+}
+
+.play-btn {
+  background-color: #28a745;
+}
+.play-btn:hover {
+  background-color: #218838;
+}
+
+.download-btn {
+  background-color: var(--primary-color);
+}
+.download-btn:hover {
+  background-color: #0056b3;
+}
+
+#no-data-message {
+  text-align: center;
+  padding: 20px;
+  color: #6c757d;
+}
+
+.audio-player-container {
+  background-color: var(--light-gray);
+  border-left: 5px solid var(--primary-color);
+}
+
+#current-playing-file {
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+#audio-player {
+  width: 100%;
+}
+
+.hidden {
+  display: none;
+}

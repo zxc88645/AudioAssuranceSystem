@@ -8,6 +8,7 @@ from typing import Dict, Optional
 import httpx
 import tempfile
 from pathlib import Path
+from datetime import datetime
 
 from models.call_models import (
     AnalysisReport,
@@ -19,6 +20,7 @@ from models.call_models import (
 from services.llm_service import LLMService
 from services.stt_service import STTService
 from utils.audio_utils import get_audio_duration
+from config.settings import settings # 引入 settings
 
 logger = logging.getLogger(__name__)
 
@@ -39,13 +41,21 @@ class AnalysisService:
         self,
         call_session_id: str,
         monitoring_file: AudioFile,
-        recording_file_url: str,  # 參數變更
+        recording_file_url: str,
     ):
         """建立一個新的分析報告任務，並在背景非同步執行它。"""
+        
+        relative_monitoring_path = Path(monitoring_file.file_path).relative_to(settings.BASE_DIR.parent)
+
         report = AnalysisReport(
             call_session_id=call_session_id,
             status=AnalysisStatus.PENDING,
+            # 儲存來自系統一的完整 URL
+            recording_file_url=recording_file_url,
+            # 儲存轉換後的相對路徑
+            monitoring_file_path=f"/{relative_monitoring_path.as_posix()}",
         )
+        
         self.reports[report.report_id] = report
         logger.info(
             "已為通話 %s 建立分析任務，ID: %s", call_session_id, report.report_id
@@ -79,7 +89,7 @@ class AnalysisService:
         self,
         report: AnalysisReport,
         monitoring_file: AudioFile,
-        recording_file_url: str,  # 參數變更
+        recording_file_url: str,
     ):
         """真正執行分析的內部管線 (Pipeline)。"""
         downloaded_recording_path = None
@@ -126,6 +136,7 @@ class AnalysisService:
                 report.llm_analysis.accuracy_score,
             )
             report.status = AnalysisStatus.SUCCESS
+            report.completed_at = datetime.now() # 增加完成時間
             logger.info("✅ 分析任務 %s 已成功完成", report.report_id)
 
         except Exception as e:
@@ -135,6 +146,7 @@ class AnalysisService:
             )
             report.status = AnalysisStatus.ERROR
             report.error_message = error_message
+            report.completed_at = datetime.now() # 增加完成時間
         finally:
             # 清理下載的暫存檔
             if downloaded_recording_path and downloaded_recording_path.exists():

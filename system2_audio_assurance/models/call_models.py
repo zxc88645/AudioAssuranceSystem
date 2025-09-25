@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 
 # --- Enums for Status and Roles ---
 
@@ -138,6 +138,13 @@ class AnalysisReport(BaseModel):
     call_session_id: str = Field(..., description="關聯的通話會話ID")
     status: AnalysisStatus = Field(
         AnalysisStatus.PENDING, description="分析任務的當前狀態"
+    )
+
+    recording_file_url: Optional[HttpUrl] = Field(
+        None, description="來自系統一的官方錄音檔的完整 URL"
+    )
+    monitoring_file_path: Optional[str] = Field(
+        None, description="系統二儲存的監控側錄檔的相對路徑"
     )
 
     # 對「正式錄音檔」的轉錄結果

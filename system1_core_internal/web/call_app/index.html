@@ -50,7 +50,13 @@
             房間: <strong id="display-room-id"></strong> | 您的 ID:
             <strong id="display-client-id"></strong>
           </p>
-          <p>通話狀態: <strong id="call-status">等待中...</strong></p>
+          <div class="call-status-container">
+            <p>通話狀態: <strong id="call-status">等待中...</strong></p>
+            <div id="recording-indicator" class="recording-indicator hidden">
+              <span class="dot"></span>
+              <span>錄音中</span>
+            </div>
+          </div>
           <div class="button-group">
             <button id="call-btn" class="btn btn-success" disabled>
               發起通話

@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const displayClientId = document.getElementById("display-client-id");
   const callerIdDisplay = document.getElementById("caller-id");
   const callStatusDisplay = document.getElementById("call-status");
+  const recordingIndicator = document.getElementById("recording-indicator");
 
   let webrtcClient = null,
     webSocketStreamer = null,
@@ -66,6 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
     joinBtn.disabled = false;
     remoteAudio.srcObject = null;
     updateCallStatus("waiting", "等待中...");
+    recordingIndicator.classList.add("hidden");
   }
 
   function handleJoinRoom() {
@@ -102,6 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
       onRemoteStream: (remoteStream) => {
         logStatus("收到遠端音訊串流，通話已連接！");
         updateCallStatus("active", "通話中");
+        recordingIndicator.classList.remove("hidden");
         if (remoteAudio.srcObject !== remoteStream) {
           remoteAudio.srcObject = remoteStream;
           remoteAudio.play().catch((e) => console.warn("音訊自動播放被阻止"));

@@ -42,52 +42,18 @@ try:
 except RuntimeError:
     logging.warning("儲存目錄 %s 不存在，暫不掛載。", settings.STORAGE_PATH)
 
-# (掛載 /call 的區塊已被移除)
 
 try:
-    # 系統二提供儀表板前端
     app.mount(
-        "/dashboard",
-        StaticFiles(directory=settings.BASE_DIR / "web/dashboard_app"),
-        name="dashboard_app",
+        "/",
+        StaticFiles(directory=settings.BASE_DIR / "web/quality_monitoring_app", html=True),
+        name="quality_monitoring_app_root",
     )
 except RuntimeError:
-    logging.warning("儀表板前端目錄 'web/dashboard_app' 不存在，暫不掛載。")
+    logging.warning("品質監控儀表板前端目錄 'web/quality_monitoring_app' 不存在，無法掛載至根目錄。")
 
 
-# --- 根目錄與健康檢查路由 ---
-@app.get("/", response_class=HTMLResponse, tags=["Root"])
-async def root():
-    """
-    根目錄，提供系統二的導覽頁面。
-    """
-    html_content = """
-    <html>
-        <head>
-            <title>AudioAssuranceSystem - System 2</title>
-            <style>
-                body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; }
-                .container { text-align: center; }
-                .link-card { background-color: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 1rem; text-decoration: none; color: black; display: block; }
-                .link-card:hover { transform: translateY(-5px); box-shadow: 0 8px 12px rgba(0,0,0,0.15); transition: all 0.2s ease-in-out; }
-                h1 { margin-bottom: 2rem; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>Welcome to AudioAssuranceSystem (System 2)</h1>
-                <div>
-                    <a href="/dashboard/index.html" class="link-card">
-                        <h2>📊 Go to Dashboard App</h2>
-                    </a>
-                </div>
-            </div>
-        </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
-
-
+# --- 健康檢查路由 ---
 @app.get("/health", tags=["System"])
 async def health_check():
     """

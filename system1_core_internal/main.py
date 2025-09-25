@@ -51,7 +51,10 @@ def print_startup_info():
     print(f"📈 核心 API (HTTP): http://localhost:{settings.DASHBOARD_API_PORT}")
     print("\n--- 前端應用 (Provided by System 1) ---")
     print(
-        f"📞 通話介面: http://localhost:{settings.DASHBOARD_API_PORT}/call/index.html"
+        f"📞 通話介面: http://localhost:{settings.DASHBOARD_API_PORT}"
+    )
+    print(
+        f"🗄️ 錄音管理: http://localhost:{settings.DASHBOARD_API_PORT}/recording_management_app/index.html"
     )
     print("=" * 60 + "\n")
 
