@@ -45,15 +45,14 @@ class AnalysisService:
     ):
         """建立一個新的分析報告任務，並在背景非同步執行它。"""
         
-        relative_monitoring_path = Path(monitoring_file.file_path).relative_to(settings.BASE_DIR.parent)
+        relative_path = Path(monitoring_file.file_path).relative_to(settings.STORAGE_PATH)
+        correct_url_path = f"/storage/{relative_path.as_posix()}"
 
         report = AnalysisReport(
             call_session_id=call_session_id,
             status=AnalysisStatus.PENDING,
-            # 儲存來自系統一的完整 URL
             recording_file_url=recording_file_url,
-            # 儲存轉換後的相對路徑
-            monitoring_file_path=f"/{relative_monitoring_path.as_posix()}",
+            monitoring_file_path=correct_url_path,
         )
         
         self.reports[report.report_id] = report
@@ -97,7 +96,7 @@ class AnalysisService:
             report.status = AnalysisStatus.PROCESSING
             logger.info("分析任務 %s 開始處理...", report.report_id)
 
-            # --- 新增步驟：下載官方錄音檔 ---
+            # --- 下載官方錄音檔 ---
             logger.info("分析任務 %s: 開始下載官方錄音檔...", report.report_id)
             downloaded_recording_path = await self._download_recording_file(
                 recording_file_url

@@ -138,12 +138,13 @@ class RecordingService:
                 logger.warning("錄音服務: 房間 %s 未找到任何串流處理器。", room_id)
                 return
 
-            handler = room_handlers[0]
-            if handler.chunk_count == 0:
-                 logger.warning("錄音服務: 房間 %s 未收到有效音訊塊，不建立錄音檔。", room_id)
-                 return
+            valid_handler = next((h for h in room_handlers if h.chunk_count > 0), None)
 
-            mixed_audio_segment = self._load_audio_from_stream(handler.get_full_stream())
+            if not valid_handler:
+                logger.warning("錄音服務: 房間 %s 所有參與者均未收到有效音訊塊，不建立錄音檔。", room_id)
+                return
+            
+            mixed_audio_segment = self._load_audio_from_stream(valid_handler.get_full_stream())
             
             if not mixed_audio_segment:
                 logger.warning("錄音服務: 房間 %s 解碼後的音訊為空。", room_id)
