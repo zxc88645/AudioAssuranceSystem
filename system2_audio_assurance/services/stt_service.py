@@ -48,7 +48,9 @@ class STTService:
                 )
 
             if file_size < 1024:
-                raise ValueError("檔案過小，可能沒有有效的音檔內容")
+                # 檔案過小可能為空，直接回傳空字串，避免 API 報錯
+                logger.warning("檔案 %s 過小，可能沒有有效的音檔內容", audio_path.name)
+                return "", 0.0
 
             logger.info("開始轉錄音檔: %s (%.1f KB)", audio_path.name, file_size / 1024)
 
@@ -65,8 +67,9 @@ class STTService:
             transcript = response.text.strip()
 
             if not transcript:
-                raise ValueError("無法識別語音內容，檔案可能損壞或不包含語音")
-
+                logger.warning("無法識別語音內容，檔案 %s 可能損壞或不包含語音", audio_path.name)
+                return "", 0.0
+            
             confidence = 1.0
 
             logger.info(
@@ -86,6 +89,32 @@ class STTService:
         except Exception as e:
             logger.error("STT 服務錯誤: %s", e)
             raise RuntimeError(f"語音轉錄失敗: {e}") from e
+
+    async def transcribe_audio_bytes(self, audio_bytes: bytes) -> Tuple[str, float]:
+        """
+        OpenAI API 支援直接傳遞 (檔名, bytes) 的元組。
+        """
+        if not audio_bytes or len(audio_bytes) < 1024:
+            # 忽略過小的音訊塊，直接回傳空結果
+            return "", 0.0
+        try:
+            # 將 bytes 包裝成 OpenAI API 需要的格式
+            audio_file = ("audio.webm", audio_bytes, "audio/webm")
+
+            response = await self.client.audio.transcriptions.create(
+                model=self.model,
+                file=audio_file,
+                language="zh",
+                prompt=self.prompt,
+                response_format="json",
+                temperature=0.0,
+            )
+            transcript = response.text.strip()
+            return transcript, 1.0
+        except Exception as e:
+            # 在即時串流中，轉錄失敗不應中斷整個服務，只記錄錯誤
+            logger.error(f"從 bytes 轉錄音訊時發生錯誤: {e}")
+            return "", 0.0
 
     async def test_connection(self) -> bool:
         """測試 OpenAI STT 連接 (非同步版本)"""

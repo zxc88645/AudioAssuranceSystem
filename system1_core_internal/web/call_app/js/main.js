@@ -184,6 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const endpoints = {
       recordingUrl: `${protocol}//${window.location.host}/ws/recording/${roomId}/${clientId}`,
       monitoringUrl: `${protocol}//localhost:8005/ws/monitoring/${roomId}/${clientId}`,
+      transcriptionUrl: `${protocol}//localhost:8005/ws/transcribe/${roomId}/${clientId}`,
     };
     webSocketStreamer = new WebSocketStreamer(stream, endpoints);
     webSocketStreamer.start();

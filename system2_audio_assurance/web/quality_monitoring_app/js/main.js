@@ -1,12 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
   const API_BASE_URL = "/api";
 
+  // --- 歷史報告視圖元素 ---
   const listView = document.getElementById("list-view");
   const detailView = document.getElementById("detail-view");
-
   const reportsTbody = document.getElementById("reports-tbody");
   const noReportsMessage = document.getElementById("no-reports-message");
-
   const backToListBtn = document.getElementById("back-to-list-btn");
   const detailReportId = document.getElementById("detail-report-id");
   const detailSessionId = document.getElementById("detail-session-id");
@@ -26,18 +25,110 @@ document.addEventListener("DOMContentLoaded", () => {
   const recordingTranscript = document.getElementById("recording-transcript");
   const monitoringTranscript = document.getElementById("monitoring-transcript");
 
+  // --- 頁籤和即時監控視圖元素 ---
+  const tabButtons = document.querySelectorAll(".tab-btn");
+  const tabContents = document.querySelectorAll(".tab-content");
+  const realtimeLog = document.getElementById("realtime-log");
+  let realtime_ws = null; // 用於即時監控的 WebSocket
+  const initialRealtimeLogMessage = "<p><i>正在等待新的通話開始...</i></p>";
+
   /**
-   * 切換顯示列表或詳情視圖
-   * @param {'list' | 'detail'} viewName
+   * witchView 函式：切換歷史報告的列表和詳情視圖
    */
   function switchView(viewName) {
+    const historicalReportsTab = document.getElementById("historical-reports");
     if (viewName === "list") {
-      listView.classList.remove("hidden");
+      historicalReportsTab.style.display = "block";
+      listView.style.display = "block"; // 確保 list-view 可見
       detailView.classList.add("hidden");
     } else {
-      listView.classList.add("hidden");
+      historicalReportsTab.style.display = "block";
+      listView.style.display = "none"; // 隱藏 list-view
       detailView.classList.remove("hidden");
     }
+  }
+
+  // --- 頁籤切換邏輯 ---
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      // 移除所有按鈕的 active class
+      tabButtons.forEach((btn) => btn.classList.remove("active"));
+      // 為當前點擊的按鈕加上 active class
+      button.classList.add("active");
+
+      const targetTabId = button.dataset.tab;
+
+      // 隱藏所有 tab content
+      tabContents.forEach((content) => {
+        content.style.display = "none";
+      });
+
+      // 詳情頁是獨立於 tab content 的，也需要隱藏
+      detailView.classList.add("hidden");
+
+      const targetTab = document.getElementById(targetTabId);
+      targetTab.style.display = "block";
+      // 如果是歷史報告 tab，確保顯示的是列表
+      if (targetTabId === "historical-reports") {
+        listView.style.display = "block";
+      }
+
+      // 根據切換的頁籤，管理 WebSocket 連線
+      if (targetTabId === "realtime-monitoring") {
+        connectRealtimeMonitoring();
+      } else {
+        // 切換到任何其他頁籤時，都斷開即時監控的連線以節省資源
+        if (realtime_ws) {
+          realtime_ws.close();
+        }
+      }
+    });
+  });
+
+  // --- 即時監控 WebSocket 邏輯 ---
+  function connectRealtimeMonitoring() {
+    // 如果已經連線，則不重複建立連線
+    if (realtime_ws && realtime_ws.readyState === WebSocket.OPEN) {
+      return;
+    }
+
+    // 重置日誌區域的內容
+    realtimeLog.innerHTML = initialRealtimeLogMessage;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    // 連接到後端新增的、無參數的通用結果推送端點
+    const wsUrl = `${protocol}//${window.location.host}/ws/current-transcription`;
+    realtime_ws = new WebSocket(wsUrl);
+
+    let isFirstMessage = true;
+
+    realtime_ws.onopen = () => {
+      console.log("已連接到即時轉錄伺服器。");
+    };
+
+    realtime_ws.onmessage = (event) => {
+      // 收到第一則訊息時，清空等待提示
+      if (isFirstMessage) {
+        realtimeLog.innerHTML = "";
+        isFirstMessage = false;
+      }
+      // 將收到的轉錄結果顯示在畫面上
+      const p = document.createElement("p");
+      p.textContent = event.data;
+      realtimeLog.appendChild(p);
+      realtimeLog.scrollTop = realtimeLog.scrollHeight; // 自動滾動到底部
+    };
+
+    realtime_ws.onclose = () => {
+      console.log("與即時轉錄伺服器的連線已中斷。");
+      realtimeLog.innerHTML = `<p><i>連線已中斷。您可以切換頁籤後再切換回來以嘗試重連。</i></p>`;
+      realtime_ws = null;
+    };
+
+    realtime_ws.onerror = (error) => {
+      console.error("即時轉錄 WebSocket 發生錯誤:", error);
+      realtimeLog.innerHTML += "<p><em>與伺服器的連線發生錯誤。</em></p>";
+    };
   }
 
   /**
@@ -81,7 +172,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     noReportsMessage.classList.add("hidden");
 
-    // 依時間倒序排序
     reports.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     reports.forEach((report) => {
@@ -119,7 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
    * @param {Array<string>} items
    */
   function renderListItems(ulElement, items) {
-    ulElement.innerHTML = ""; // Clear previous items
+    ulElement.innerHTML = "";
     if (items && items.length > 0) {
       items.forEach((item) => {
         const li = document.createElement("li");
@@ -216,14 +306,14 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   backToListBtn.addEventListener("click", () => {
-    // 停止播放音訊
     recordingAudioPlayer.pause();
     monitoringAudioPlayer.pause();
     switchView("list");
   });
 
   // --- 初始化 ---
+  // 預設啟動即時監控，並在背景載入歷史報告
+  connectRealtimeMonitoring();
   fetchAllReports();
-  // 可以設定一個定時器來自動刷新列表
-  setInterval(fetchAllReports, 30000); // 每 30 秒刷新一次
+  setInterval(fetchAllReports, 30000);
 });

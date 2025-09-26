@@ -4,8 +4,10 @@
 class WebSocketStreamer {
   constructor(stream, endpoints) {
     if (!stream) throw new Error("MediaStream 不可為空");
-    if (!endpoints || !endpoints.recordingUrl || !endpoints.monitoringUrl) {
-      throw new Error("必須提供錄音和監控的 WebSocket 端點");
+    // 解構 endpoints，確保所有需要的 URL 都存在
+    const { recordingUrl, monitoringUrl, transcriptionUrl } = endpoints;
+    if (!recordingUrl || !monitoringUrl || !transcriptionUrl) {
+      throw new Error("必須提供錄音、監控和即時轉錄的 WebSocket 端點");
     }
     this.stream = stream;
     this.endpoints = endpoints;
@@ -21,6 +23,10 @@ class WebSocketStreamer {
     this.sockets = [
       this._createSocket(this.endpoints.recordingUrl, "Recording"),
       this._createSocket(this.endpoints.monitoringUrl, "Monitoring"),
+      this._createSocket(
+        this.endpoints.transcriptionUrl,
+        "Realtime-Transcription"
+      ),
     ];
 
     Promise.all(this.sockets.map((sw) => sw.connectionPromise))

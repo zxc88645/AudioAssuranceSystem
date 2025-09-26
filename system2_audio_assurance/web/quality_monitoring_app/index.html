@@ -5,6 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>品質監控儀表板 - AudioAssuranceSystem</title>
     <link rel="stylesheet" href="css/style.css" />
+    <style>
+      .tabs {
+        display: flex;
+        border-bottom: 2px solid var(--medium-gray);
+        margin-bottom: 20px;
+      }
+      .tab-btn {
+        padding: 10px 20px;
+        cursor: pointer;
+        border: none;
+        background-color: transparent;
+        font-size: 1.1em;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+      }
+      .tab-btn.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        font-weight: bold;
+      }
+    </style>
   </head>
   <body>
     <div class="container">
@@ -14,23 +35,53 @@
       </header>
 
       <main id="main-content" class="main-content">
-        <section id="list-view" class="card">
-          <h2>分析報告總覽</h2>
-          <div class="table-container">
-            <table id="reports-table">
-              <thead>
-                <tr>
-                  <th>報告 ID</th>
-                  <th>通話 Session ID</th>
-                  <th>分析狀態</th>
-                  <th>準確率分數</th>
-                  <th>完成時間</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody id="reports-tbody"></tbody>
-            </table>
-            <p id="no-reports-message" class="hidden">目前沒有任何分析報告。</p>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="realtime-monitoring">
+            即時轉錄監控
+          </button>
+          <button class="tab-btn" data-tab="historical-reports">
+            歷史分析報告
+          </button>
+        </div>
+
+        <section id="realtime-monitoring" class="tab-content active">
+          <div class="card">
+            <h2>即時轉錄監控</h2>
+            <div
+              id="realtime-log"
+              class="transcript-content"
+              style="height: 400px; font-size: 1.1em"
+            >
+              <p><i>正在等待新的通話開始...</i></p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="historical-reports"
+          class="tab-content"
+          style="display: none"
+        >
+          <div id="list-view" class="card">
+            <h2>分析報告總覽</h2>
+            <div class="table-container">
+              <table id="reports-table">
+                <thead>
+                  <tr>
+                    <th>報告 ID</th>
+                    <th>通話 Session ID</th>
+                    <th>分析狀態</th>
+                    <th>準確率分數</th>
+                    <th>完成時間</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="reports-tbody"></tbody>
+              </table>
+              <p id="no-reports-message" class="hidden">
+                目前沒有任何分析報告。
+              </p>
+            </div>
           </div>
         </section>
 
@@ -47,7 +98,6 @@
               <span id="detail-session-id"></span>
             </p>
           </div>
-
           <div class="card">
             <h3>LLM 分析結果</h3>
             <div class="llm-summary">
@@ -64,7 +114,6 @@
               <ul id="detail-suggestions"></ul>
             </div>
           </div>
-
           <div class="card">
             <h3>音檔播放與比對</h3>
             <div class="audio-comparison">
@@ -78,7 +127,6 @@
               </div>
             </div>
           </div>
-
           <div class="card">
             <h3>語音轉文字 (STT) 內容對比</h3>
             <div class="stt-comparison">
