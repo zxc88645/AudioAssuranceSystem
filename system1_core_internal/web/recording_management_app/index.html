@@ -1,57 +1,89 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>錄音檔管理 - AudioAssuranceSystem</title>
+    <title>音訊檔案管理 - AudioAssuranceSystem</title>
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <div class="container">
+    <div class="app-shell">
       <header class="header">
         <div class="header-content">
-          <h1>📁 錄音檔管理介面</h1>
-          <p>🔍 檢視、播放與下載所有已歸檔的通話錄音</p>
           <div class="header-badge">System 1</div>
+          <h1>System 1 音訊檔案管理</h1>
+          <p>搜尋歸檔錄音、播放驗證內容並下載原始檔案的集中式管理面板。</p>
+          <div class="header-meta">
+            <span class="header-chip">快速搜尋</span>
+            <span class="header-chip">檔案下載</span>
+            <span class="header-chip">播放驗證</span>
+          </div>
         </div>
       </header>
 
       <main class="main-content">
-        <section class="card">
-          <div class="controls">
+        <section class="card filter-card">
+          <div class="card-heading">
+            <div>
+              <h2>檔案搜尋</h2>
+              <p>可輸入 Session ID 或參與者 ID，支援即時關鍵字篩選。</p>
+            </div>
+            <span class="hint-chip">共用 API：/api/recordings</span>
+          </div>
+          <div class="search-wrapper">
+            <span class="search-icon" aria-hidden="true">🔍</span>
             <input
               type="text"
               id="search-input"
-              placeholder="依通話 Session ID 或參與者 ID 搜尋..."
+              placeholder="輸入 Session ID、參與者 ID 或關鍵字..."
+              autocomplete="off"
             />
           </div>
         </section>
 
-        <section class="card">
+        <section class="card table-card">
+          <div class="card-heading">
+            <div>
+              <h2>錄音清單</h2>
+              <p>最新記錄會自動置頂，點擊播放即可立即驗證音訊。</p>
+            </div>
+            <div class="table-meta">
+              <span class="meta-dot"></span>
+              <span>即時載入</span>
+            </div>
+          </div>
           <div class="table-container">
-            <table id="recordings-table">
+            <table id="recordings-table" aria-label="錄音檔案清單">
               <thead>
                 <tr>
-                  <th>通話 Session ID</th>
-                  <th>參與者</th>
-                  <th>錄音時長</th>
-                  <th>檔案大小</th>
-                  <th>歸檔時間</th>
-                  <th>操作</th>
+                  <th scope="col">通話 Session ID</th>
+                  <th scope="col">參與者</th>
+                  <th scope="col">音訊長度</th>
+                  <th scope="col">檔案大小</th>
+                  <th scope="col">歸檔時間</th>
+                  <th scope="col">操作</th>
                 </tr>
               </thead>
               <tbody id="recordings-tbody"></tbody>
             </table>
-            <p id="no-data-message" class="hidden">
-              找不到錄音檔或後端 API 尚未就緒。
-            </p>
+            <div id="no-data-message" class="empty-state hidden">
+              <div class="empty-illustration"></div>
+              <p>尚未取得錄音資料，請稍待或確認後端 API 狀態。</p>
+            </div>
           </div>
         </section>
 
-        <section class="card audio-player-container">
-          <h2>音訊播放器</h2>
-          <p id="current-playing-file">請選擇一筆錄音進行播放</p>
-          <audio id="audio-player" controls></audio>
+        <section class="card audio-card">
+          <div class="card-heading">
+            <div>
+              <h2>音訊預覽</h2>
+              <p id="current-playing-file">請點選任一列的播放按鈕以開始預聽。</p>
+            </div>
+          </div>
+          <div class="audio-player-wrapper">
+            <audio id="audio-player" controls></audio>
+            <p class="helper-text">播放時建議使用耳機，以便檢視音質與音量差異。</p>
+          </div>
         </section>
       </main>
     </div>

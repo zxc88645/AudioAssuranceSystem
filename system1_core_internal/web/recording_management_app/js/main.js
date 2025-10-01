@@ -6,144 +6,174 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchInput = document.getElementById("search-input");
   const audioPlayer = document.getElementById("audio-player");
   const currentPlayingFile = document.getElementById("current-playing-file");
+  const defaultPlayerLabel = currentPlayingFile.textContent;
 
-  let allRecordings = []; // 用於儲存所有錄音資料，方便搜尋
+  let allRecordings = [];
+  let currentPlayingRow = null;
+  let currentFilePath = "";
 
-  /**
-   * 格式化秒數為 mm:ss 格式
-   * @param {number} totalSeconds
-   * @returns {string}
-   */
   function formatDuration(totalSeconds) {
-    if (isNaN(totalSeconds) || totalSeconds < 0) return "00:00";
+    if (Number.isNaN(totalSeconds) || totalSeconds < 0) return "00:00";
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = Math.floor(totalSeconds % 60);
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
-      2,
-      "0"
-    )}`;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   }
 
-  /**
-   * 格式化檔案大小
-   * @param {number} bytes
-   * @returns {string}
-   */
   function formatFileSize(bytes) {
-    if (isNaN(bytes) || bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    if (Number.isNaN(bytes) || bytes <= 0) return "0 B";
+    const base = 1024;
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(base)), units.length - 1);
+    const value = bytes / Math.pow(base, exponent);
+    return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 2)} ${units[exponent]}`;
   }
 
-  /**
-   * 將 ISO 格式的日期時間字串格式化為本地可讀格式
-   * @param {string} isoString
-   * @returns {string}
-   */
   function formatDateTime(isoString) {
-    if (!isoString) return "N/A";
+    if (!isoString) return "--";
     try {
-      return new Date(isoString).toLocaleString();
-    } catch (e) {
-      return "Invalid Date";
+      return new Date(isoString).toLocaleString("zh-TW", { hour12: false });
+    } catch (error) {
+      console.warn("無法格式化日期：", isoString, error);
+      return "--";
     }
   }
 
-  /**
-   * 渲染表格資料
-   * @param {Array} recordingsData
-   */
-  function renderTable(recordingsData) {
-    recordingsTbody.innerHTML = ""; // 清空現有內容
+  function toRelativePath(permanentPath) {
+    if (!permanentPath || typeof permanentPath !== "string") return "";
+    const segments = permanentPath.split(/[/\\]+/).filter(Boolean);
+    if (segments.length >= 3) {
+      return `/${segments.slice(-3).join("/")}`;
+    }
+    return permanentPath.startsWith("/") ? permanentPath : `/${permanentPath}`;
+  }
 
-    if (!recordingsData || recordingsData.length === 0) {
+  function clearPlayingState({ resetLabel = false } = {}) {
+    if (currentPlayingRow) {
+      currentPlayingRow.classList.remove("is-playing");
+      currentPlayingRow = null;
+    }
+    if (resetLabel) {
+      currentFilePath = "";
+      currentPlayingFile.textContent = defaultPlayerLabel;
+      audioPlayer.pause();
+      audioPlayer.removeAttribute("src");
+    }
+  }
+
+  function renderTable(recordingsData, { filtered = false } = {}) {
+    recordingsTbody.innerHTML = "";
+    const rows = Array.isArray(recordingsData) ? recordingsData : [];
+    const hasData = rows.length > 0;
+    clearPlayingState({ resetLabel: !hasData });
+
+    if (!hasData) {
       noDataMessage.classList.remove("hidden");
+      const messageParagraph = noDataMessage.querySelector("p");
+      if (messageParagraph) {
+        messageParagraph.textContent = filtered
+          ? "找不到符合的錄音結果，請嘗試其他關鍵字。"
+          : "尚未取得錄音資料，請稍後或確認後端服務狀態。";
+      }
       return;
     }
+
     noDataMessage.classList.add("hidden");
 
-    recordingsData.forEach((rec) => {
-      const tr = document.createElement("tr");
+    rows.forEach((rec) => {
+      const row = document.createElement("tr");
+      const relativePath = toRelativePath(rec.permanent_path);
+      const participants = Array.isArray(rec.participant_ids)
+        ? rec.participant_ids.join(", ")
+        : "--";
 
-      // 從完整的檔案路徑中提取相對路徑
-      const filePathParts = rec.permanent_path.split("/");
-      const relativePath = `/${filePathParts.slice(-3).join("/")}`;
-
-      tr.innerHTML = `
-        <td>${rec.call_session_id}</td>
-        <td>${rec.participant_ids.join(", ")}</td>
+      row.innerHTML = `
+        <td>${rec.call_session_id || "--"}</td>
+        <td>${participants}</td>
         <td>${formatDuration(rec.duration_seconds)}</td>
         <td>${formatFileSize(rec.file_size_bytes)}</td>
-        <td>${formatDateTime(rec.archived_at)}</td>
+        <td>${formatDateTime(rec.archived_at || rec.created_at)}</td>
         <td class="actions-cell">
-          <button class="play-btn" data-file-path="${relativePath}">播放</button>
+          <button class="play-btn" data-file-path="${relativePath}" type="button">播放</button>
           <a href="${relativePath}" class="download-btn" download>下載</a>
         </td>
       `;
-      recordingsTbody.appendChild(tr);
+
+      if (relativePath && relativePath === currentFilePath) {
+        row.classList.add("is-playing");
+        currentPlayingRow = row;
+      }
+
+      recordingsTbody.appendChild(row);
     });
   }
 
-  /**
-   * 從後端獲取錄音資料
-   */
   async function fetchRecordings() {
     try {
       const response = await fetch(API_ENDPOINT);
       if (!response.ok) {
-        throw new Error(`HTTP 錯誤! 狀態: ${response.status}`);
+        throw new Error(`HTTP 狀態 ${response.status}`);
       }
       const data = await response.json();
-      allRecordings = data;
+      allRecordings = Array.isArray(data)
+        ? data
+            .slice()
+            .sort(
+              (a, b) =>
+                new Date(b.archived_at || b.created_at) -
+                new Date(a.archived_at || a.created_at)
+            )
+        : [];
       renderTable(allRecordings);
     } catch (error) {
-      console.error("無法獲取錄音資料:", error);
+      console.error("載入錄音清單失敗：", error);
       allRecordings = [];
-      renderTable([]); // 顯示無資料訊息
+      renderTable(allRecordings);
     }
   }
 
-  /**
-   * 處理搜尋輸入
-   */
   function handleSearch() {
-    const query = searchInput.value.toLowerCase().trim();
+    const query = searchInput.value.trim().toLowerCase();
     if (!query) {
       renderTable(allRecordings);
       return;
     }
 
-    const filteredData = allRecordings.filter((rec) => {
-      const sessionIdMatch = rec.call_session_id.toLowerCase().includes(query);
-      const participantsMatch = rec.participant_ids.some((id) =>
-        id.toLowerCase().includes(query)
-      );
-      return sessionIdMatch || participantsMatch;
+    const filtered = allRecordings.filter((rec) => {
+      const sessionId = (rec.call_session_id || "").toLowerCase();
+      const participants = Array.isArray(rec.participant_ids)
+        ? rec.participant_ids.join(" ").toLowerCase()
+        : "";
+      return sessionId.includes(query) || participants.includes(query);
     });
 
-    renderTable(filteredData);
+    renderTable(filtered, { filtered: true });
   }
 
-  /**
-   * 處理點擊事件 (播放)
-   * @param {Event} event
-   */
   function handleTableClick(event) {
-    if (event.target.classList.contains("play-btn")) {
-      const filePath = event.target.dataset.filePath;
-      if (filePath) {
-        audioPlayer.src = filePath;
-        audioPlayer.play();
-        currentPlayingFile.textContent = `正在播放: ${filePath
-          .split("/")
-          .pop()}`;
-      }
+    const target = event.target;
+    if (!target.classList.contains("play-btn")) return;
+
+    const filePath = target.dataset.filePath;
+    if (!filePath) return;
+
+    clearPlayingState();
+    const row = target.closest("tr");
+    if (row) {
+      row.classList.add("is-playing");
+      currentPlayingRow = row;
     }
+
+    currentFilePath = filePath;
+    audioPlayer.src = filePath;
+    audioPlayer.play().catch((error) => {
+      console.warn("音訊播放被阻擋或失敗：", error);
+    });
+
+    currentPlayingFile.textContent = `目前播放：${filePath.split("/").pop()}`;
   }
 
-  // 初始化
+  audioPlayer.addEventListener("ended", () => clearPlayingState({ resetLabel: true }));
+
   fetchRecordings();
   searchInput.addEventListener("input", handleSearch);
   recordingsTbody.addEventListener("click", handleTableClick);
