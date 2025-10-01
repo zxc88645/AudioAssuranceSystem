@@ -31,7 +31,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function logStatus(message) {
     const timestamp = new Date().toLocaleTimeString();
     statusDisplay.innerHTML =
-      `[${timestamp}] ${message}\n` + statusDisplay.innerHTML;
+      statusDisplay.innerHTML + `\n[${timestamp}] ${message}`;    
+    statusDisplay.scrollTop = statusDisplay.scrollHeight;
+
   }
 
   function updateCallStatus(status, text) {
