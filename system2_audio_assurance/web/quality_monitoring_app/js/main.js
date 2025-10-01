@@ -197,7 +197,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const p = document.createElement("p");
     p.textContent = text;
+    p.style.opacity = '0';
+    p.style.transform = 'translateX(-20px)';
+    p.style.transition = 'all 0.3s ease';
+    
     realtimeLog.appendChild(p);
+    
+    // 添加淡入動畫
+    setTimeout(() => {
+      p.style.opacity = '1';
+      p.style.transform = 'translateX(0)';
+    }, 10);
+    
     realtimeLog.scrollTop = realtimeLog.scrollHeight;
   }
 
@@ -246,6 +257,30 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  /**
+   * 顯示通知
+   */
+  function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
+        <span>${message}</span>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(100%)';
+      setTimeout(() => {
+        document.body.removeChild(notification);
+      }, 300);
+    }, 3000);
+  }
+
   // --- 頁籤切換邏輯 ---
   tabButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -266,6 +301,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const targetTab = document.getElementById(targetTabId);
       targetTab.style.display = "block";
+      
+      // 添加淡入動畫
+      addFadeInAnimation(targetTab);
+      
       // 如果是歷史報告 tab，確保顯示的是列表
       if (targetTabId === "historical-reports") {
         listView.style.display = "block";
@@ -274,6 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // 根據切換的頁籤，管理 WebSocket 連線
       if (targetTabId === "realtime-monitoring") {
         connectRealtimeMonitoring();
+        showNotification('已連接即時監控', 'success');
       } else {
         // 切換到任何其他頁籤時，都斷開即時監控的連線以節省資源
         if (realtime_ws) {
@@ -301,6 +341,13 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("已連線至即時監控伺服器");
       if (progressExtraMessage) {
         progressExtraMessage.textContent = "";
+      }
+      // 添加連線成功的視覺反饋
+      if (progressContainer) {
+        progressContainer.style.borderColor = 'var(--success-color)';
+        setTimeout(() => {
+          progressContainer.style.borderColor = '';
+        }, 2000);
       }
     };
 
@@ -334,6 +381,15 @@ document.addEventListener("DOMContentLoaded", () => {
       realtimeLog.innerHTML = `<p><i>連線中斷。切換回此頁面以重新連線。</i></p>`;
       realtimeState = { isFirstMessage: true, currentSessionId: null };
       realtime_ws = null;
+      
+      // 添加連線中斷的視覺反饋
+      if (progressContainer) {
+        progressContainer.style.borderColor = 'var(--danger-color)';
+        setTimeout(() => {
+          progressContainer.style.borderColor = '';
+        }, 3000);
+      }
+      showNotification('即時監控連線中斷', 'error');
     };
 
     realtime_ws.onerror = (error) => {
@@ -377,6 +433,20 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
+   * 添加淡入動畫效果
+   */
+  function addFadeInAnimation(element, delay = 0) {
+    element.style.opacity = '0';
+    element.style.transform = 'translateY(20px)';
+    element.style.transition = 'all 0.5s ease';
+    
+    setTimeout(() => {
+      element.style.opacity = '1';
+      element.style.transform = 'translateY(0)';
+    }, delay);
+  }
+
+  /**
    * 渲染報告總覽列表
    * @param {Array} reports
    */
@@ -384,13 +454,14 @@ document.addEventListener("DOMContentLoaded", () => {
     reportsTbody.innerHTML = "";
     if (!reports || reports.length === 0) {
       noReportsMessage.classList.remove("hidden");
+      addFadeInAnimation(noReportsMessage);
       return;
     }
     noReportsMessage.classList.add("hidden");
 
     reports.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    reports.forEach((report) => {
+    reports.forEach((report, index) => {
       const tr = document.createElement("tr");
       const score = report.llm_analysis
         ? report.llm_analysis.accuracy_score.toFixed(1)
@@ -415,7 +486,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </button>
         </td>
       `;
+      
       reportsTbody.appendChild(tr);
+      addFadeInAnimation(tr, index * 50); // 錯開動畫時間
     });
   }
 
@@ -480,6 +553,14 @@ document.addEventListener("DOMContentLoaded", () => {
       : "轉錄失敗或無資料";
 
     switchView("detail");
+    
+    // 添加載入動畫
+    const cards = detailView.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+      addFadeInAnimation(card, index * 100);
+    });
+    
+    showNotification('報告詳情載入完成', 'success');
   }
 
   /**
@@ -573,4 +654,29 @@ document.addEventListener("DOMContentLoaded", () => {
   connectRealtimeMonitoring();
   fetchAllReports();
   setInterval(fetchAllReports, 30000);
+  
+  // 添加頁面載入完成的通知
+  setTimeout(() => {
+    showNotification('品質監控儀表板已就緒', 'success');
+  }, 1000);
+  
+  // 添加鍵盤快捷鍵支持
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch(e.key) {
+        case '1':
+          e.preventDefault();
+          tabButtons[0]?.click();
+          break;
+        case '2':
+          e.preventDefault();
+          tabButtons[1]?.click();
+          break;
+        case 'r':
+          e.preventDefault();
+          refreshReportsBtn?.click();
+          break;
+      }
+    }
+  });
 });
