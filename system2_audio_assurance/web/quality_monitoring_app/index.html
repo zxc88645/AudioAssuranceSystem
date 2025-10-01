@@ -47,6 +47,35 @@
         <section id="realtime-monitoring" class="tab-content active">
           <div class="card">
             <h2>即時轉錄監控</h2>
+            <div class="call-progress" id="call-progress">
+              <div class="progress-status" id="progress-status-text">等待通話</div>
+              <div class="progress-track">
+                <div class="progress-step is-active" data-status="waiting_for_call">
+                  <div class="step-circle">1</div>
+                  <span class="step-label">等待通話</span>
+                </div>
+                <div class="progress-step is-pending" data-status="call_started">
+                  <div class="step-circle">2</div>
+                  <span class="step-label">通話開始</span>
+                </div>
+                <div class="progress-step is-pending" data-status="call_ended">
+                  <div class="step-circle">3</div>
+                  <span class="step-label">通話結束</span>
+                </div>
+                <div class="progress-step is-pending" data-status="verifying">
+                  <div class="step-circle">4</div>
+                  <span class="step-label">驗證中</span>
+                </div>
+                <div class="progress-step is-pending" data-status="verification_complete">
+                  <div class="step-circle">5</div>
+                  <span class="step-label">驗證完成</span>
+                </div>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-bar-fill" id="progress-bar-fill"></div>
+              </div>
+              <div class="progress-extra-message" id="progress-extra-message"></div>
+            </div>
             <div
               id="realtime-log"
               class="transcript-content"
@@ -63,7 +92,10 @@
           style="display: none"
         >
           <div id="list-view" class="card">
-            <h2>分析報告總覽</h2>
+            <div class="card-header-row">
+              <h2>分析報告總覽</h2>
+              <button id="refresh-reports-btn" class="btn btn-secondary" type="button">重新整理</button>
+            </div>
             <div class="table-container">
               <table id="reports-table">
                 <thead>

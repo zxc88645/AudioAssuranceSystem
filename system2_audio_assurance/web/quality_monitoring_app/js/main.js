@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const listView = document.getElementById("list-view");
   const detailView = document.getElementById("detail-view");
   const reportsTbody = document.getElementById("reports-tbody");
+  const refreshReportsBtn = document.getElementById("refresh-reports-btn");
   const noReportsMessage = document.getElementById("no-reports-message");
   const backToListBtn = document.getElementById("back-to-list-btn");
   const detailReportId = document.getElementById("detail-report-id");
@@ -29,8 +30,205 @@ document.addEventListener("DOMContentLoaded", () => {
   const tabButtons = document.querySelectorAll(".tab-btn");
   const tabContents = document.querySelectorAll(".tab-content");
   const realtimeLog = document.getElementById("realtime-log");
+  const progressContainer = document.getElementById("call-progress");
+  const progressStatusText = document.getElementById("progress-status-text");
+  const progressExtraMessage = document.getElementById("progress-extra-message");
+  const progressBarFill = document.getElementById("progress-bar-fill");
+  const progressSteps = progressContainer
+    ? Array.from(progressContainer.querySelectorAll(".progress-step"))
+    : [];
+  const progressStepMap = progressSteps.reduce((acc, step) => {
+    acc[step.dataset.status] = step;
+    return acc;
+  }, {});
+  const PROGRESS_SEQUENCE = [
+    "waiting_for_call",
+    "call_started",
+    "call_ended",
+    "verifying",
+    "verification_complete",
+  ];
+  const PROGRESS_LABELS = {
+    waiting_for_call: "等待通話",
+    call_started: "通話開始",
+    call_ended: "通話結束",
+    verifying: "驗證中",
+    verification_complete: "驗證完成",
+    verification_failed: "驗證失敗",
+  };
+  let progressSessionId = null;
+  let currentProgressStatus = "waiting_for_call";
+  let realtimeState = { isFirstMessage: true, currentSessionId: null };
   let realtime_ws = null; // 用於即時監控的 WebSocket
   const initialRealtimeLogMessage = "<p><i>正在等待新的通話開始...</i></p>";
+
+  function resetProgressVisuals() {
+    if (!progressContainer) return;
+    progressSteps.forEach((step) => {
+      step.classList.remove("is-complete", "is-active");
+      step.classList.add("is-pending");
+    });
+    const waitingStep = progressStepMap["waiting_for_call"];
+    if (waitingStep) {
+      waitingStep.classList.add("is-active");
+      waitingStep.classList.remove("is-pending");
+    }
+    if (progressBarFill) {
+      progressBarFill.style.width = "0%";
+    }
+    progressContainer.classList.remove("has-error");
+    if (progressStatusText) {
+      progressStatusText.textContent = PROGRESS_LABELS.waiting_for_call;
+    }
+    if (progressExtraMessage) {
+      progressExtraMessage.textContent = "";
+    }
+    progressSessionId = null;
+    currentProgressStatus = "waiting_for_call";
+  }
+
+  function truncateMessage(message, maxLength = 120) {
+    if (!message) return "";
+    const text = String(message);
+    return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+  }
+
+  function updateProgress(status, sessionId = null, extra = {}) {
+    if (!progressContainer) return;
+
+    const normalizedStatus = typeof status === "string" ? status : "";
+    const extraMessage =
+      extra && typeof extra.message === "string" ? extra.message.trim() : "";
+
+    if (normalizedStatus === "waiting_for_call") {
+      resetProgressVisuals();
+      if (extraMessage && progressExtraMessage) {
+        progressExtraMessage.textContent = truncateMessage(extraMessage);
+      }
+      return;
+    }
+
+    if (sessionId) {
+      if (progressSessionId && progressSessionId !== sessionId) {
+        resetProgressVisuals();
+      }
+      progressSessionId = sessionId;
+    }
+
+    let targetStatus = normalizedStatus;
+    if (normalizedStatus === "verification_failed") {
+      targetStatus = "verification_complete";
+      progressContainer.classList.add("has-error");
+    } else {
+      progressContainer.classList.remove("has-error");
+    }
+
+    const targetIndex = PROGRESS_SEQUENCE.indexOf(targetStatus);
+    if (targetIndex === -1) {
+      if (progressStatusText) {
+        progressStatusText.textContent =
+          PROGRESS_LABELS[normalizedStatus] || normalizedStatus;
+      }
+      if (progressExtraMessage) {
+        progressExtraMessage.textContent = truncateMessage(extraMessage);
+      }
+      currentProgressStatus = normalizedStatus;
+      return;
+    }
+
+    progressSteps.forEach((step) => {
+      const stepStatus = step.dataset.status;
+      const stepIndex = PROGRESS_SEQUENCE.indexOf(stepStatus);
+      if (stepIndex === -1) return;
+      step.classList.toggle("is-complete", stepIndex < targetIndex);
+      step.classList.toggle("is-active", stepIndex === targetIndex);
+      step.classList.toggle("is-pending", stepIndex > targetIndex);
+    });
+
+    if (progressBarFill) {
+      const denominator = PROGRESS_SEQUENCE.length - 1 || 1;
+      const percent = (targetIndex / denominator) * 100;
+      progressBarFill.style.width = `${Math.min(Math.max(percent, 0), 100)}%`;
+    }
+
+    if (progressStatusText) {
+      progressStatusText.textContent =
+        PROGRESS_LABELS[normalizedStatus] ||
+        PROGRESS_LABELS[targetStatus] ||
+        normalizedStatus;
+    }
+
+    if (progressExtraMessage) {
+      if (normalizedStatus === "verification_failed" && extraMessage) {
+        progressExtraMessage.textContent = `失敗原因：${truncateMessage(extraMessage)}`;
+      } else {
+        progressExtraMessage.textContent = truncateMessage(extraMessage);
+      }
+    }
+
+    currentProgressStatus = normalizedStatus;
+  }
+
+  function handleTranscriptPayload(payload) {
+    if (!realtimeLog) return;
+    const text =
+      (payload && (payload.text || payload.transcript)) || "";
+    if (!text) return;
+
+    const sessionId = payload && payload.session_id ? payload.session_id : null;
+
+    if (
+      sessionId &&
+      realtimeState.currentSessionId &&
+      sessionId !== realtimeState.currentSessionId
+    ) {
+      realtimeLog.innerHTML = "";
+      realtimeState.isFirstMessage = true;
+    }
+
+    if (sessionId) {
+      realtimeState.currentSessionId = sessionId;
+    }
+
+    if (realtimeState.isFirstMessage) {
+      realtimeLog.innerHTML = "";
+      realtimeState.isFirstMessage = false;
+    }
+
+    const p = document.createElement("p");
+    p.textContent = text;
+    realtimeLog.appendChild(p);
+    realtimeLog.scrollTop = realtimeLog.scrollHeight;
+  }
+
+  function handleStatusPayload(payload) {
+    if (!payload || typeof payload.status !== "string") {
+      return;
+    }
+
+    const { status } = payload;
+    const sessionId =
+      typeof payload.session_id === "string" ? payload.session_id : null;
+    const extra = payload.extra || {};
+
+    if (status === "call_started" && sessionId) {
+      if (progressSessionId && progressSessionId !== sessionId) {
+        resetProgressVisuals();
+      }
+      realtimeState.currentSessionId = sessionId;
+      realtimeState.isFirstMessage = true;
+    }
+
+    updateProgress(status, sessionId, extra);
+
+    if (status === "waiting_for_call") {
+      realtimeState.currentSessionId = null;
+      realtimeState.isFirstMessage = true;
+    }
+  }
+
+  resetProgressVisuals();
+
 
   /**
    * witchView 函式：切換歷史報告的列表和詳情視圖
@@ -87,47 +285,65 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- 即時監控 WebSocket 邏輯 ---
   function connectRealtimeMonitoring() {
-    // 如果已經連線，則不重複建立連線
     if (realtime_ws && realtime_ws.readyState === WebSocket.OPEN) {
       return;
     }
 
-    // 重置日誌區域的內容
     realtimeLog.innerHTML = initialRealtimeLogMessage;
+    resetProgressVisuals();
+    realtimeState = { isFirstMessage: true, currentSessionId: null };
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    // 連接到後端新增的、無參數的通用結果推送端點
     const wsUrl = `${protocol}//${window.location.host}/ws/current-transcription`;
     realtime_ws = new WebSocket(wsUrl);
 
-    let isFirstMessage = true;
-
     realtime_ws.onopen = () => {
-      console.log("已連接到即時轉錄伺服器。");
+      console.log("已連線至即時監控伺服器");
+      if (progressExtraMessage) {
+        progressExtraMessage.textContent = "";
+      }
     };
 
     realtime_ws.onmessage = (event) => {
-      // 收到第一則訊息時，清空等待提示
-      if (isFirstMessage) {
-        realtimeLog.innerHTML = "";
-        isFirstMessage = false;
+      let payload;
+      try {
+        payload = JSON.parse(event.data);
+      } catch (parseError) {
+        handleTranscriptPayload({ text: event.data });
+        return;
       }
-      // 將收到的轉錄結果顯示在畫面上
-      const p = document.createElement("p");
-      p.textContent = event.data;
-      realtimeLog.appendChild(p);
-      realtimeLog.scrollTop = realtimeLog.scrollHeight; // 自動滾動到底部
+
+      if (!payload || typeof payload !== "object") {
+        return;
+      }
+
+      if (payload.type === "transcript") {
+        handleTranscriptPayload(payload);
+      } else if (payload.type === "status") {
+        handleStatusPayload(payload);
+      } else {
+        console.debug("收到未識別訊息", payload);
+      }
     };
 
     realtime_ws.onclose = () => {
-      console.log("與即時轉錄伺服器的連線已中斷。");
-      realtimeLog.innerHTML = `<p><i>連線已中斷。您可以切換頁籤後再切換回來以嘗試重連。</i></p>`;
+      console.log("即時監控伺服器連線已中斷");
+      updateProgress("waiting_for_call", null, {
+        message: "連線已中斷，稍後將自動重試。",
+      });
+      realtimeLog.innerHTML = `<p><i>連線中斷。切換回此頁面以重新連線。</i></p>`;
+      realtimeState = { isFirstMessage: true, currentSessionId: null };
       realtime_ws = null;
     };
 
     realtime_ws.onerror = (error) => {
       console.error("即時轉錄 WebSocket 發生錯誤:", error);
-      realtimeLog.innerHTML += "<p><em>與伺服器的連線發生錯誤。</em></p>";
+      if (progressExtraMessage) {
+        progressExtraMessage.textContent = "連線發生錯誤，請稍後再試。";
+      }
+      if (realtimeLog) {
+        realtimeLog.innerHTML += "<p><em>連線發生錯誤，請稍後再試。</em></p>";
+      }
     };
   }
 
@@ -269,15 +485,50 @@ document.addEventListener("DOMContentLoaded", () => {
   /**
    * 從後端獲取所有報告
    */
-  async function fetchAllReports() {
+  async function fetchAllReports(options = {}) {
+    const { showLoading = false } = options;
+    let restoreLabel = null;
+    let showFailureState = false;
+
+    if (showLoading && refreshReportsBtn) {
+      const defaultLabel =
+        refreshReportsBtn.dataset.defaultLabel ||
+        refreshReportsBtn.textContent.trim() ||
+        "重新整理";
+      refreshReportsBtn.dataset.defaultLabel = defaultLabel;
+      restoreLabel = defaultLabel;
+      refreshReportsBtn.disabled = true;
+      refreshReportsBtn.textContent = "刷新中...";
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/reports`);
-      if (!response.ok) throw new Error("無法獲取報告列表");
+      if (!response.ok) throw new Error("無法載入報告列表");
       const reports = await response.json();
       renderReportsList(reports);
     } catch (error) {
       console.error(error);
       noReportsMessage.classList.remove("hidden");
+      if (showLoading && refreshReportsBtn) {
+        refreshReportsBtn.textContent = "刷新失敗";
+        showFailureState = true;
+      }
+    } finally {
+      if (showLoading && refreshReportsBtn) {
+        const defaultLabel =
+          restoreLabel ||
+          refreshReportsBtn.dataset.defaultLabel ||
+          "重新整理";
+        const finish = () => {
+          refreshReportsBtn.textContent = defaultLabel;
+          refreshReportsBtn.disabled = false;
+        };
+        if (showFailureState) {
+          setTimeout(finish, 1200);
+        } else {
+          finish();
+        }
+      }
     }
   }
 
@@ -310,6 +561,12 @@ document.addEventListener("DOMContentLoaded", () => {
     monitoringAudioPlayer.pause();
     switchView("list");
   });
+
+  if (refreshReportsBtn) {
+    refreshReportsBtn.addEventListener("click", () => {
+      fetchAllReports({ showLoading: true });
+    });
+  }
 
   // --- 初始化 ---
   // 預設啟動即時監控，並在背景載入歷史報告

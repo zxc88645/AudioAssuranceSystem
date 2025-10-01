@@ -15,9 +15,11 @@ from models.call_models import (
     AnalysisStatus,
     AudioFile,
     LlmAnalysisResult,
+    MonitoringProgressStatus,
     SttResult,
 )
 from services.llm_service import LLMService
+from services.realtime_transcription_service import realtime_transcription_service
 from services.stt_service import STTService
 from utils.audio_utils import get_audio_duration
 from config.settings import settings # 引入 settings
@@ -58,6 +60,11 @@ class AnalysisService:
         self.reports[report.report_id] = report
         logger.info(
             "已為通話 %s 建立分析任務，ID: %s", call_session_id, report.report_id
+        )
+
+        await realtime_transcription_service.broadcast_status(
+            MonitoringProgressStatus.VERIFYING,
+            session_id=call_session_id,
         )
 
         asyncio.create_task(
@@ -137,6 +144,11 @@ class AnalysisService:
             report.status = AnalysisStatus.SUCCESS
             report.completed_at = datetime.now() # 增加完成時間
             logger.info("✅ 分析任務 %s 已成功完成", report.report_id)
+            await realtime_transcription_service.broadcast_status(
+                MonitoringProgressStatus.VERIFICATION_COMPLETE,
+                session_id=report.call_session_id,
+            )
+            realtime_transcription_service.schedule_waiting_reset()
 
         except Exception as e:
             error_message = f"分析管線發生錯誤: {e}"
@@ -146,6 +158,12 @@ class AnalysisService:
             report.status = AnalysisStatus.ERROR
             report.error_message = error_message
             report.completed_at = datetime.now() # 增加完成時間
+            await realtime_transcription_service.broadcast_status(
+                MonitoringProgressStatus.VERIFICATION_FAILED,
+                session_id=report.call_session_id,
+                extra={"message": str(e)},
+            )
+            realtime_transcription_service.schedule_waiting_reset(delay=8.0)
         finally:
             # 清理下載的暫存檔
             if downloaded_recording_path and downloaded_recording_path.exists():

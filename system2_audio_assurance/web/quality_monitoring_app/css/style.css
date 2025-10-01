@@ -213,3 +213,125 @@ body {
 .hidden {
   display: none;
 }
+
+
+.card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.card-header-row h2 {
+  margin: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.card-header-row .btn {
+  white-space: nowrap;
+}
+
+.call-progress {
+  background-color: var(--light-gray);
+  border: 1px solid var(--medium-gray);
+  border-radius: var(--border-radius);
+  padding: 15px 20px;
+  margin-bottom: 20px;
+}
+
+.progress-status {
+  font-weight: bold;
+  margin-bottom: 12px;
+  color: var(--dark-gray);
+}
+
+.progress-track {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.progress-step {
+  flex: 1 1 0;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  opacity: 0.45;
+  transition: opacity 0.3s ease;
+}
+
+.progress-step .step-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--medium-gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  background-color: #ffffff;
+  color: var(--dark-gray);
+}
+
+.progress-step .step-label {
+  font-size: 0.85em;
+  color: var(--dark-gray);
+}
+
+.progress-step.is-active,
+.progress-step.is-complete {
+  opacity: 1;
+}
+
+.progress-step.is-active .step-circle,
+.progress-step.is-complete .step-circle {
+  border-color: var(--primary-color);
+  background-color: var(--primary-color);
+  color: #ffffff;
+}
+
+.progress-step.is-complete .step-circle {
+  background-color: var(--success-color);
+  border-color: var(--success-color);
+}
+
+.progress-bar {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--medium-gray);
+  margin-top: 18px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background-color: var(--primary-color);
+  transition: width 0.35s ease;
+}
+
+.call-progress.has-error .progress-bar-fill {
+  background-color: var(--danger-color);
+}
+
+.call-progress.has-error .progress-step[data-status="verification_complete"] .step-circle {
+  background-color: var(--danger-color);
+  border-color: var(--danger-color);
+}
+
+.progress-extra-message {
+  margin-top: 12px;
+  min-height: 1.2em;
+  font-size: 0.9em;
+  color: var(--danger-color);
+}

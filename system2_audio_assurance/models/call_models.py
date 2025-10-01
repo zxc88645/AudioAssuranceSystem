@@ -43,6 +43,17 @@ class AnalysisStatus(str, Enum):
     SUCCESS = "success"
     ERROR = "error"
 
+class MonitoringProgressStatus(str, Enum):
+    """前端進度條使用的系統二流程狀態"""
+
+    WAITING_FOR_CALL = "waiting_for_call"
+    CALL_STARTED = "call_started"
+    CALL_ENDED = "call_ended"
+    VERIFYING = "verifying"
+    VERIFICATION_COMPLETE = "verification_complete"
+    VERIFICATION_FAILED = "verification_failed"
+
+
 
 # --- Core Data Models ---
 
