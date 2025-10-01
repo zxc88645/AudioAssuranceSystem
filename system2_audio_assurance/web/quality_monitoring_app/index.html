@@ -1,204 +1,221 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>品質監控儀表板 - AudioAssuranceSystem</title>
+    <title>音訊品質監測儀表板 - AudioAssuranceSystem</title>
     <link rel="stylesheet" href="css/style.css" />
-    <style>
-      .tabs {
-        display: flex;
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        border-radius: var(--border-radius-sm);
-        padding: 4px;
-        margin-bottom: 24px;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      }
-      .tab-btn {
-        flex: 1;
-        padding: 12px 24px;
-        cursor: pointer;
-        border: none;
-        background: transparent;
-        font-size: 1em;
-        font-weight: 500;
-        border-radius: var(--border-radius-sm);
-        transition: all 0.3s ease;
-        color: var(--text-light);
-        position: relative;
-        overflow: hidden;
-      }
-      .tab-btn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-        transition: left 0.5s;
-      }
-      .tab-btn:hover::before {
-        left: 100%;
-      }
-      .tab-btn.active {
-        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-        color: white;
-        font-weight: 600;
-        box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
-        transform: translateY(-1px);
-      }
-    </style>
   </head>
   <body>
-    <div class="container">
+    <div class="app-shell">
       <header class="header">
         <div class="header-content">
-          <h1>🎯 品質監控儀表板</h1>
-          <p>🔍 檢視所有通話錄音的自動化分析報告</p>
           <div class="header-badge">System 2</div>
+          <h1>音訊品質監測儀表板</h1>
+          <p>即時監控系統二的通話音訊品質，集中呈現比對與檢核結果。</p>
+          <div class="header-meta">
+            <span class="header-chip">自動檢核流程</span>
+            <span class="header-chip">音訊差異對比</span>
+            <span class="header-chip">AI 分析摘要</span>
+          </div>
         </div>
       </header>
 
       <main id="main-content" class="main-content">
-        <div class="tabs">
-          <button class="tab-btn active" data-tab="realtime-monitoring">
-            即時轉錄監控
+        <nav class="tabs" aria-label="檢視切換">
+          <button class="tab-btn active" type="button" data-tab="realtime-monitoring">
+            <span class="tab-label">即時監控</span>
+            <span class="tab-caption">追蹤目前通話流程</span>
           </button>
-          <button class="tab-btn" data-tab="historical-reports">
-            分析報告總覽
+          <button class="tab-btn" type="button" data-tab="historical-reports">
+            <span class="tab-label">歷史報告</span>
+            <span class="tab-caption">快速回顧先前結果</span>
           </button>
-        </div>
+        </nav>
 
-        <section id="realtime-monitoring" class="tab-content active">
-          <div class="card">
-            <h2>即時轉錄監控</h2>
-            <div class="call-progress" id="call-progress">
-              <div class="progress-status" id="progress-status-text">等待通話</div>
-              <div class="progress-track">
-                <div class="progress-step is-active" data-status="waiting_for_call">
-                  <div class="step-circle">1</div>
-                  <span class="step-label">等待通話</span>
-                </div>
-                <div class="progress-step is-pending" data-status="call_started">
-                  <div class="step-circle">2</div>
-                  <span class="step-label">通話開始</span>
-                </div>
-                <div class="progress-step is-pending" data-status="call_ended">
-                  <div class="step-circle">3</div>
-                  <span class="step-label">通話結束</span>
-                </div>
-                <div class="progress-step is-pending" data-status="verifying">
-                  <div class="step-circle">4</div>
-                  <span class="step-label">驗證中</span>
-                </div>
-                <div class="progress-step is-pending" data-status="verification_complete">
-                  <div class="step-circle">5</div>
-                  <span class="step-label">驗證完成</span>
-                </div>
-              </div>
-              <div class="progress-bar">
-                <div class="progress-bar-fill" id="progress-bar-fill"></div>
-              </div>
-              <div class="progress-extra-message" id="progress-extra-message"></div>
+        <section id="realtime-monitoring" class="tab-content active" aria-label="即時監控">
+          <div class="section-header">
+            <div>
+              <h2>即時監控</h2>
+              <p>掌握從等待通話到檢核完成的每個流程節點。</p>
             </div>
-            <div
-              id="realtime-log"
-              class="transcript-content"
-              style="height: 400px; font-size: 1.1em"
-            >
-              <p><i>正在等待新的通話開始...</i></p>
+          </div>
+
+          <div class="monitoring-grid">
+            <div class="card card-progress">
+              <div id="call-progress" class="call-progress">
+                <div class="card-heading call-progress-heading">
+                  <div>
+                    <h3>流程進度</h3>
+                    <p>狀態將依照系統回傳自動更新。</p>
+                  </div>
+                  <span class="status-chip status-chip-neutral progress-status" id="progress-status-text">等待通話</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-step is-active" data-status="waiting_for_call">
+                    <div class="step-circle">1</div>
+                    <span class="step-label">等待通話</span>
+                  </div>
+                  <div class="progress-step is-pending" data-status="call_started">
+                    <div class="step-circle">2</div>
+                    <span class="step-label">通話進行中</span>
+                  </div>
+                  <div class="progress-step is-pending" data-status="call_ended">
+                    <div class="step-circle">3</div>
+                    <span class="step-label">通話已結束</span>
+                  </div>
+                  <div class="progress-step is-pending" data-status="verifying">
+                    <div class="step-circle">4</div>
+                    <span class="step-label">檢核中</span>
+                  </div>
+                  <div class="progress-step is-pending" data-status="verification_complete">
+                    <div class="step-circle">5</div>
+                    <span class="step-label">檢核完成</span>
+                  </div>
+                </div>
+                <div class="progress-bar" role="progressbar" aria-live="polite">
+                  <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                </div>
+                <p class="progress-extra-message" id="progress-extra-message"></p>
+              </div>
+            </div>
+
+            <div class="card card-live-log" style="display: none;">
+              <div class="card-heading">
+                <div>
+                  <h3>即時事件紀錄</h3>
+                  <p>最新的檢核訊息會於此處自動滾動顯示。</p>
+                </div>
+              </div>
+              <div id="realtime-log" class="transcript-content live-log" aria-live="polite">
+                <p><i>目前等待通話開始...</i></p>
+              </div>
             </div>
           </div>
         </section>
 
-        <section
-          id="historical-reports"
-          class="tab-content"
-          style="display: none"
-        >
-          <div id="list-view" class="card">
-            <div class="card-header-row">
-              <h2>分析報告總覽</h2>
-              <button id="refresh-reports-btn" class="btn btn-secondary" type="button">重新整理</button>
+        <section id="historical-reports" class="tab-content" style="display: none" aria-label="歷史報告">
+          <div class="section-header">
+            <div>
+              <h2>歷史報告</h2>
+              <p>統整所有完成的檢核結果，可回放音訊與檢視 AI 分析。</p>
             </div>
+            <div class="section-actions">
+              <button id="refresh-reports-btn" class="btn btn-secondary" type="button">重新整理</button>
+              <span class="section-hint">自動每 30 秒更新</span>
+            </div>
+          </div>
+
+          <div id="list-view" class="card">
             <div class="table-container">
-              <table id="reports-table">
+              <table id="reports-table" aria-describedby="reports-table">
                 <thead>
                   <tr>
-                    <th>報告 ID</th>
-                    <th>通話 Session ID</th>
-                    <th>分析狀態</th>
-                    <th>準確率分數</th>
-                    <th>完成時間</th>
-                    <th>操作</th>
+                    <th scope="col">報告 ID</th>
+                    <th scope="col">通話 Session ID</th>
+                    <th scope="col">檢核狀態</th>
+                    <th scope="col">準確度</th>
+                    <th scope="col">完成時間</th>
+                    <th scope="col">操作</th>
                   </tr>
                 </thead>
                 <tbody id="reports-tbody"></tbody>
               </table>
-              <p id="no-reports-message" class="hidden">
-                目前沒有任何分析報告。
-              </p>
+              <div id="no-reports-message" class="empty-state hidden">
+                <div class="empty-state-illustration"></div>
+                <p>目前尚無歷史報告，稍後再試或手動刷新。</p>
+              </div>
             </div>
           </div>
         </section>
 
-        <section id="detail-view" class="hidden">
-          <button id="back-to-list-btn" class="btn btn-secondary">
-            &larr; 返回列表
-          </button>
+        <section id="detail-view" class="detail-view hidden" aria-label="報告詳情">
+          <div class="detail-toolbar">
+            <button id="back-to-list-btn" class="btn btn-ghost" type="button">← 返回列表</button>
+            <span class="detail-breadcrumb">歷史報告 · 詳細檢視</span>
+          </div>
 
-          <div class="card report-header">
-            <h3>報告詳情</h3>
-            <p><strong>報告 ID:</strong> <span id="detail-report-id"></span></p>
-            <p>
-              <strong>通話 Session ID:</strong>
-              <span id="detail-session-id"></span>
-            </p>
-          </div>
-          <div class="card">
-            <h3>LLM 分析結果</h3>
-            <div class="llm-summary">
-              <div id="detail-accuracy-score" class="score-badge"></div>
-              <p id="detail-summary"></p>
-            </div>
-            <div class="llm-details">
-              <p>
-                <strong>評分理由:</strong> <span id="detail-reasoning"></span>
-              </p>
-              <p><strong>關鍵語意差異:</strong></p>
-              <ul id="detail-key-differences"></ul>
-              <p><strong>系統改進建議:</strong></p>
-              <ul id="detail-suggestions"></ul>
-            </div>
-          </div>
-          <div class="card">
-            <h3>音檔播放與比對</h3>
-            <div class="audio-comparison">
-              <div class="audio-player-wrapper">
-                <h4>官方錄音檔 (System 1)</h4>
-                <audio id="recording-audio-player" controls></audio>
+          <div class="detail-grid">
+            <div class="card report-header">
+              <div class="card-heading">
+                <div>
+                  <h3>報告摘要</h3>
+                  <p>快速瀏覽此次檢核的基本資訊。</p>
+                </div>
               </div>
-              <div class="audio-player-wrapper">
-                <h4>監控側錄檔 (System 2)</h4>
-                <audio id="monitoring-audio-player" controls></audio>
+              <div class="report-meta">
+                <div class="meta-item">
+                  <span class="meta-label">報告 ID</span>
+                  <span class="meta-value" id="detail-report-id"></span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">通話 Session ID</span>
+                  <span class="meta-value" id="detail-session-id"></span>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="card">
-            <h3>語音轉文字 (STT) 內容對比</h3>
-            <div class="stt-comparison">
-              <div class="transcript-panel">
-                <h4>官方錄音轉錄稿</h4>
-                <div id="recording-transcript" class="transcript-content"></div>
+
+            <div class="card llm-card">
+              <div class="card-heading">
+                <div>
+                  <h3>LLM 分析結果</h3>
+                  <p>AI 對音訊差異與品質的重點結論。</p>
+                </div>
               </div>
-              <div class="transcript-panel">
-                <h4>監控錄音轉錄稿</h4>
-                <div
-                  id="monitoring-transcript"
-                  class="transcript-content"
-                ></div>
+              <div class="llm-summary">
+                <span id="detail-accuracy-score" class="score-badge score-medium">--</span>
+                <p id="detail-summary"></p>
+              </div>
+              <div class="llm-details">
+                <p><strong>評估原因：</strong><span id="detail-reasoning"></span></p>
+                <div class="llm-lists">
+                  <div>
+                    <h4>關鍵差異</h4>
+                    <ul id="detail-key-differences"></ul>
+                  </div>
+                  <div>
+                    <h4>系統建議</h4>
+                    <ul id="detail-suggestions"></ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-heading">
+                <div>
+                  <h3>音訊播放與對比</h3>
+                  <p>直接聆聽官方音訊與監控音訊的差異。</p>
+                </div>
+              </div>
+              <div class="audio-comparison">
+                <div class="audio-player-wrapper">
+                  <h4>官方音訊（System 1）</h4>
+                  <audio id="recording-audio-player" controls></audio>
+                </div>
+                <div class="audio-player-wrapper">
+                  <h4>監控音訊（System 2）</h4>
+                  <audio id="monitoring-audio-player" controls></audio>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-heading">
+                <div>
+                  <h3>語音轉文字對照</h3>
+                  <p>比較兩套系統的 STT 結果，快速定位差異。</p>
+                </div>
+              </div>
+              <div class="stt-comparison">
+                <div class="transcript-panel">
+                  <h4>官方音訊轉文字</h4>
+                  <div id="recording-transcript" class="transcript-content"></div>
+                </div>
+                <div class="transcript-panel">
+                  <h4>監控音訊轉文字</h4>
+                  <div id="monitoring-transcript" class="transcript-content"></div>
+                </div>
               </div>
             </div>
           </div>
