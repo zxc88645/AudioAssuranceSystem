@@ -1,86 +1,172 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AudioAssuranceSystem - 通話介面</title>
+    <title>AudioAssuranceSystem - 通話控制控制台</title>
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <div class="container">
+    <div class="app-shell">
       <header class="header">
         <div class="header-content">
-          <h1>🎯 即時通話客戶端</h1>
-          <p>🔗 WebRTC + WebSocket 測試介面</p>
           <div class="header-badge">System 1</div>
+          <h1>System 1 通話介面</h1>
+          <p>建立 WebRTC 會話、監聽來電並掌握錄音狀態的專用測試面板。</p>
+          <div class="header-meta">
+            <span class="header-chip">低延遲串流</span>
+            <span class="header-chip">即時錄音監控</span>
+            <span class="header-chip">除錯資訊</span>
+          </div>
         </div>
       </header>
 
       <main class="main-content">
-        <section id="setup-section" class="card">
-          <h2>連線設定</h2>
-          <div class="form-group">
-            <label for="roomId">房間 ID (Room ID)</label>
-            <input
-              type="text"
-              id="roomId"
-              placeholder="請輸入一個共享的房間 ID"
-              value="room1"
-            />
-          </div>
-          <div class="form-group">
-            <label for="clientId">您的 ID (Client ID)</label>
-            <input
-              type="text"
-              id="clientId"
-              placeholder="請輸入您自己的唯一 ID"
-            />
-          </div>
-          <button id="join-btn" class="btn btn-primary">加入房間</button>
-        </section>
+        <div class="layout-grid">
+          <div class="primary-stack">
+            <section class="card" id="setup-section">
+              <div class="card-heading">
+                <div>
+                  <h2>初始化設定</h2>
+                  <p>輸入共享房間與客戶端識別，即可建立測試連線。</p>
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="roomId">房間 ID (Room ID)</label>
+                  <input
+                    type="text"
+                    id="roomId"
+                    placeholder="請輸入欲共享的房間 ID"
+                    value="room1"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="clientId">客戶端 ID (Client ID)</label>
+                  <input
+                    type="text"
+                    id="clientId"
+                    placeholder="請輸入您的唯一識別"
+                  />
+                </div>
+              </div>
+              <div class="section-actions">
+                <button id="join-btn" class="btn btn-primary" type="button">加入房間</button>
+                <p class="helper-text">成功加入後會自動建立 WebSocket 與 WebRTC 連線。</p>
+              </div>
+            </section>
 
-        <section id="incoming-call-section" class="card incoming-call hidden">
-          <h2>有新的來電...</h2>
-          <p><strong id="caller-id"></strong> 正在呼叫您</p>
-          <div class="button-group">
-            <button id="answer-btn" class="btn btn-success">接聽</button>
-            <button id="decline-btn" class="btn btn-danger">拒絕</button>
-          </div>
-        </section>
+            <section class="card incoming-card hidden" id="incoming-call-section">
+              <div class="card-heading">
+                <div>
+                  <h2>有新來電</h2>
+                  <p>請確認呼叫來源並決定是否接聽。</p>
+                </div>
+                <span class="status-chip status-chip-warning">等待回應</span>
+              </div>
+              <div class="incoming-body">
+                <p><strong id="caller-id">未知來電</strong> 正在呼叫。</p>
+                <div class="button-group">
+                  <button id="answer-btn" class="btn btn-success" type="button">接聽</button>
+                  <button id="decline-btn" class="btn btn-danger" type="button">婉拒</button>
+                </div>
+              </div>
+            </section>
 
-        <section id="call-section" class="card hidden">
-          <h2>通話控制</h2>
-          <p>
-            房間: <strong id="display-room-id"></strong> | 您的 ID:
-            <strong id="display-client-id"></strong>
-          </p>
-          <div class="call-status-container">
-            <p>通話狀態: <strong id="call-status">等待中...</strong></p>
-            <div id="recording-indicator" class="recording-indicator hidden">
-              <span class="dot"></span>
-              <span>錄音中</span>
+            <section class="card call-card hidden" id="call-section">
+              <div class="card-heading">
+                <div>
+                  <h2>通話控制</h2>
+                  <p>掌控通話狀態、錄音與掛斷操作。</p>
+                </div>
+                <span class="status-chip status-chip-info" id="call-status">等待中</span>
+              </div>
+
+              <div class="call-meta">
+                <div class="meta-item">
+                  <span class="meta-label">房間 ID</span>
+                  <span class="meta-value" id="display-room-id">--</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">客戶端 ID</span>
+                  <span class="meta-value" id="display-client-id">--</span>
+                </div>
+                <div class="meta-item recording-indicator hidden" id="recording-indicator">
+                  <span class="dot"></span>
+                  <div>
+                    <span class="meta-label">錄音狀態</span>
+                    <span class="meta-value">錄音中</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="button-group">
+                <button id="call-btn" class="btn btn-success" type="button" disabled>
+                  發起通話
+                </button>
+                <button id="hangup-btn" class="btn btn-danger" type="button" disabled>
+                  結束通話
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <aside class="support-stack" aria-label="支援資訊">
+            <section class="card info-card" aria-label="流程導覽">
+              <div class="card-heading">
+                <div>
+                  <h2>操作步驟</h2>
+                  <p>確保依序完成以下步驟，即可順利測試。</p>
+                </div>
+              </div>
+              <ol class="stepper" aria-label="通話建立流程">
+                <li>
+                  <span class="step-title">設定識別資訊</span>
+                  <span class="step-desc">輸入房間與客戶端 ID 後按下加入房間。</span>
+                </li>
+                <li>
+                  <span class="step-title">等待對端加入</span>
+                  <span class="step-desc">看到提示後可以發起通話或等待來電。</span>
+                </li>
+                <li>
+                  <span class="step-title">監聽錄音狀態</span>
+                  <span class="step-desc">確認錄音指示燈亮起，代表音訊已送往錄製管線。</span>
+                </li>
+                <li>
+                  <span class="step-title">確認串流品質</span>
+                  <span class="step-desc">於右側事件紀錄與音訊監聽中檢視細節。</span>
+                </li>
+              </ol>
+            </section>
+          </aside>
+        </div>
+
+        <div class="secondary-grid">
+          <section class="card status-card" id="status-section">
+            <div class="card-heading">
+              <div>
+                <h2>事件紀錄</h2>
+                <p>最新連線與通話事件會即時記錄於此。</p>
+              </div>
+              <button class="btn btn-ghost" type="button" id="clear-log-btn">清除紀錄</button>
             </div>
-          </div>
-          <div class="button-group">
-            <button id="call-btn" class="btn btn-success" disabled>
-              發起通話
-            </button>
-            <button id="hangup-btn" class="btn btn-danger" disabled>
-              掛斷
-            </button>
-          </div>
-        </section>
+            <div class="status-display" id="status-display">等待加入房間...</div>
+          </section>
 
-        <section id="status-section" class="card">
-          <h2>狀態日誌</h2>
-          <div id="status-display" class="status-display">等待加入房間...</div>
-        </section>
-
-        <section id="audio-section" class="card">
-          <h2>遠端音訊</h2>
-          <audio id="remote-audio" controls autoplay playsinline></audio>
-          <p class="muted">當對方開始說話時，您將在這裡聽到聲音。</p>
-        </section>
+          <section class="card audio-card" id="audio-section">
+            <div class="card-heading">
+              <div>
+                <h2>遠端音訊監聽</h2>
+                <p>播放對端音訊以確認串流品質。</p>
+              </div>
+              <span class="audio-hint">建議使用耳機</span>
+            </div>
+            <div class="audio-player-wrapper">
+              <audio id="remote-audio" controls autoplay playsinline></audio>
+              <p class="helper-text">若無聲音，請確認瀏覽器已有播放權限或重新整理頁面。</p>
+            </div>
+          </section>
+        </div>
       </main>
     </div>
 
