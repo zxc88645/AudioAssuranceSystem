@@ -259,6 +259,10 @@ a:hover {
   grid-template-columns: repeat(2, minmax(320px, 1fr));
 }
 
+.card-progress {
+  grid-column: 1 / -1;
+}
+
 .card {
   position: relative;
   background: var(--surface-strong);
