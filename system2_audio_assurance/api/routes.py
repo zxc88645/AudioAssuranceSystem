@@ -3,7 +3,7 @@ AudioAssuranceSystem - HTTP API 端點 (系統二版本)
 """
 
 from typing import List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, HttpUrl
 
 from services.analysis_service import analysis_service
@@ -63,3 +63,29 @@ async def reset_progress():
         force=True,
     )
     return {"message": "進度條已重置"}
+
+
+@router.delete("/reports/cleanup", status_code=200)
+async def cleanup_old_reports(days: int = 30):
+    """清理超過指定天數的舊報告。"""
+    from datetime import datetime, timedelta
+    
+    cutoff_date = datetime.now() - timedelta(days=days)
+    removed_count = 0
+    
+    reports_to_remove = []
+    for report_id, report in analysis_service.reports.items():
+        if report.created_at < cutoff_date:
+            reports_to_remove.append(report_id)
+    
+    for report_id in reports_to_remove:
+        del analysis_service.reports[report_id]
+        removed_count += 1
+    
+    if removed_count > 0:
+        analysis_service._save_reports()
+    
+    return {
+        "message": f"已清理 {removed_count} 個超過 {days} 天的舊報告",
+        "removed_count": removed_count
+    }
