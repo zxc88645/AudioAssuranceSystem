@@ -63,7 +63,7 @@ class AnalysisService:
         )
 
         await realtime_transcription_service.broadcast_status(
-            MonitoringProgressStatus.VERIFYING,
+            MonitoringProgressStatus.FILE_BACKUP,
             session_id=call_session_id,
         )
 
@@ -104,6 +104,10 @@ class AnalysisService:
             logger.info("分析任務 %s 開始處理...", report.report_id)
 
             # --- 下載官方錄音檔 ---
+            await realtime_transcription_service.broadcast_status(
+                MonitoringProgressStatus.FILE_STORAGE,
+                session_id=report.call_session_id,
+            )
             logger.info("分析任務 %s: 開始下載官方錄音檔...", report.report_id)
             downloaded_recording_path = await self._download_recording_file(
                 recording_file_url
@@ -112,6 +116,10 @@ class AnalysisService:
                 raise RuntimeError(f"無法下載官方錄音檔從 {recording_file_url}")
 
             # --- STT 階段：並行處理兩個音檔 ---
+            await realtime_transcription_service.broadcast_status(
+                MonitoringProgressStatus.STT_PROCESSING,
+                session_id=report.call_session_id,
+            )
             logger.info("分析任務 %s：開始 STT 轉錄...", report.report_id)
             stt_tasks = [
                 self.stt_service.transcribe_audio(str(downloaded_recording_path)),
@@ -127,9 +135,17 @@ class AnalysisService:
 
             report.recording_stt_result = SttResult(transcript=transcript_recording)
             report.monitoring_stt_result = SttResult(transcript=transcript_monitoring)
+            await realtime_transcription_service.broadcast_status(
+                MonitoringProgressStatus.CROSS_VERIFICATION,
+                session_id=report.call_session_id,
+            )
             logger.info("分析任務 %s：STT 轉錄完成", report.report_id)
 
             # --- LLM 階段：比對兩份轉錄稿 ---
+            await realtime_transcription_service.broadcast_status(
+                MonitoringProgressStatus.COMPARISON,
+                session_id=report.call_session_id,
+            )
             logger.info("分析任務 %s：開始 LLM 比對...", report.report_id)
             llm_raw_result = await self.llm_service.analyze_conversation(
                 recording_transcript=transcript_recording,
@@ -141,14 +157,18 @@ class AnalysisService:
                 report.report_id,
                 report.llm_analysis.accuracy_score,
             )
+            await realtime_transcription_service.broadcast_status(
+                MonitoringProgressStatus.RESULT_COMPLETE,
+                session_id=report.call_session_id,
+            )
             report.status = AnalysisStatus.SUCCESS
             report.completed_at = datetime.now() # 增加完成時間
             logger.info("✅ 分析任務 %s 已成功完成", report.report_id)
             await realtime_transcription_service.broadcast_status(
-                MonitoringProgressStatus.VERIFICATION_COMPLETE,
+                MonitoringProgressStatus.VERIFICATION_SUCCESS,
                 session_id=report.call_session_id,
             )
-            realtime_transcription_service.schedule_waiting_reset()
+            # realtime_transcription_service.schedule_waiting_reset()  # 移除自動重置
 
         except Exception as e:
             error_message = f"分析管線發生錯誤: {e}"
@@ -163,7 +183,7 @@ class AnalysisService:
                 session_id=report.call_session_id,
                 extra={"message": str(e)},
             )
-            realtime_transcription_service.schedule_waiting_reset(delay=8.0)
+            # realtime_transcription_service.schedule_waiting_reset(delay=8.0)  # 移除自動重置
         finally:
             # 清理下載的暫存檔
             if downloaded_recording_path and downloaded_recording_path.exists():
