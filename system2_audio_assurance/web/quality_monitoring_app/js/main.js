@@ -9,10 +9,10 @@ document.addEventListener("DOMContentLoaded", () => {
   ];
 
   const PROGRESS_LABELS = {
-    waiting_for_call: "電話連線", recording_started: "電話系統", call_started: "錄音系統",
-    call_in_progress: "錄音系統", call_ended: "錄音檔存放", file_storage: "錄音檔備份",
-    file_backup: "錄音檔核平台", stt_processing: "STT 轉換", cross_verification: "交互比對",
-    verification_complete: "檢核完成", verification_failed: "檢核失敗"
+    waiting_for_call: "電話連線", recording_started: "電話系統", call_in_progress: "錄音系統",
+    call_ended: "錄音檔存放", file_storage: "錄音檔備份", file_backup: "錄音檔核平台",
+    stt_processing: "STT 轉換", cross_verification: "交互比對", comparison: "語意比對",
+    result_complete: "檢核完成", verification_success: "驗證成功", verification_failed: "檢核失敗"
   };
 
   const FLOW_STEPS = [
@@ -24,9 +24,8 @@ document.addEventListener("DOMContentLoaded", () => {
     { id: "file_backup", label: "錄音檔檢核平台", row: 2, col: 2, isMainPlatform: true },
     { id: "stt_processing", label: "STT轉換1", row: 1, col: 3, isSubProcess: true },
     { id: "cross_verification", label: "STT轉換2", row: 2, col: 3, isSubProcess: true },
-    { id: "verification_complete", label: "STT轉換3", row: 3, col: 3, isSubProcess: true },
-    { id: "comparison", label: "交互比對", row: 2, col: 4, isSubProcess: true },
-    { id: "result_complete", label: "完成", row: 2, col: 5, isSubProcess: true },
+    { id: "comparison", label: "STT轉換3", row: 3, col: 3, isSubProcess: true },
+    { id: "result_complete", label: "交互比對", row: 2, col: 4, isSubProcess: true },
     { id: "verification_success", label: "驗證成功", row: 1, col: 6, isResult: true },
     { id: "verification_failed", label: "驗證失敗", row: 3, col: 6, isResult: true }
   ];
@@ -44,6 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshReportsBtn: document.getElementById("refresh-reports-btn"),
     noReportsMessage: document.getElementById("no-reports-message"),
     backToListBtn: document.getElementById("back-to-list-btn"),
+    resetProgressBtn: document.getElementById("reset-progress-btn"),
     
     // 詳情視圖
     detailReportId: document.getElementById("detail-report-id"),
@@ -165,7 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const connections = [
       [0, 1], [1, 2], [2, 3], [3, 4], [2, 5], [4, 5],
       [5, 6], [5, 7], [5, 8], [6, 9], [7, 9], [8, 9],
-      [9, 10], [10, 11], [10, 12]
+      [9, 10], [9, 11]
     ];
     
     connections.forEach(([fromIdx, toIdx]) => {
@@ -206,6 +206,36 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.lineTo(toX, toY);
     ctx.stroke();
     ctx.setLineDash([]);
+    
+    // 從交互比對到完成的連接
+    const resultStep = FLOW_STEPS[9];
+    const resultX = stepWidth * resultStep.col + stepWidth / 2;
+    const resultY = stepHeight * resultStep.row + stepHeight / 2;
+    const successStep = FLOW_STEPS[10];
+    const failStep = FLOW_STEPS[11];
+    const successX = stepWidth * successStep.col + stepWidth / 2;
+    const successY = stepHeight * successStep.row + stepHeight / 2;
+    const failX = stepWidth * failStep.col + stepWidth / 2;
+    const failY = stepHeight * failStep.row + stepHeight / 2;
+    
+    const resultIndex = PROGRESS_SEQUENCE.indexOf('result_complete');
+    const isResultActive = resultIndex <= currentIndex || currentStep === 'verification_success' || currentStep === 'verification_failed';
+    
+    ctx.strokeStyle = isResultActive ? '#14b8a6' : 'rgba(148, 163, 184, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+    
+    // 到成功的線
+    ctx.beginPath();
+    ctx.moveTo(resultX, resultY);
+    ctx.lineTo(successX, successY);
+    ctx.stroke();
+    
+    // 到失敗的線
+    ctx.beginPath();
+    ctx.moveTo(resultX, resultY);
+    ctx.lineTo(failX, failY);
+    ctx.stroke();
     
     // 繪製步驟框
     FLOW_STEPS.forEach((step) => {
@@ -280,7 +310,9 @@ document.addEventListener("DOMContentLoaded", () => {
         else if (step.isResult) ctx.font = '9px Inter, sans-serif';
         else ctx.font = '11px Inter, sans-serif';
         
-        ctx.fillText(step.label, x, y + 2);
+        // 調整 STT轉換3 的標籤
+        const displayLabel = step.id === 'comparison' ? 'STT轉換3' : step.label;
+        ctx.fillText(displayLabel, x, y + 2);
       }
       
       ctx.font = '11px Inter, sans-serif';
@@ -325,16 +357,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     let targetStatus = normalizedStatus;
+    let targetIndex;
+    
     if (normalizedStatus === "verification_failed") {
-      targetStatus = "verification_complete";
+      targetStatus = "verification_failed";
+      targetIndex = PROGRESS_SEQUENCE.length - 1; // 設為最後一個位置
       elements.progressContainer.classList.add("has-error");
+    } else if (normalizedStatus === "verification_success") {
+      targetStatus = "verification_success";
+      targetIndex = PROGRESS_SEQUENCE.length - 1; // 設為最後一個位置
+      elements.progressContainer.classList.remove("has-error");
     } else {
       elements.progressContainer.classList.remove("has-error");
+      targetIndex = PROGRESS_SEQUENCE.indexOf(targetStatus);
     }
-    
-    if (normalizedStatus === "call_started") targetStatus = "call_in_progress";
 
-    const targetIndex = PROGRESS_SEQUENCE.indexOf(targetStatus);
     if (targetIndex === -1) {
       if (elements.progressStatusText) {
         elements.progressStatusText.textContent = PROGRESS_LABELS[normalizedStatus] || normalizedStatus;
@@ -361,7 +398,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       elements.progressStatusText.className = `status-chip-${
         normalizedStatus === "verification_failed" ? "error" :
-        normalizedStatus === "verification_complete" ? "success" :
+        normalizedStatus === "verification_success" ? "success" :
         normalizedStatus === "verifying" ? "warning" : "neutral"
       }`;
     }
@@ -411,7 +448,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const sessionId = payload.session_id || null;
     const extra = payload.extra || {};
 
-    if (["call_started", "recording_started", "call_in_progress"].includes(status) && sessionId) {
+    if (["recording_started", "call_in_progress", "call_ended"].includes(status) && sessionId) {
       if (progressSessionId && progressSessionId !== sessionId) resetProgressVisuals();
       realtimeState.currentSessionId = sessionId;
       realtimeState.isFirstMessage = true;
@@ -714,6 +751,22 @@ document.addEventListener("DOMContentLoaded", () => {
   if (elements.refreshReportsBtn) {
     elements.refreshReportsBtn.addEventListener("click", () => {
       fetchAllReports({ showLoading: true });
+    });
+  }
+
+  if (elements.resetProgressBtn) {
+    elements.resetProgressBtn.addEventListener("click", async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/reset-progress`, { method: "POST" });
+        if (response.ok) {
+          utils.showNotification("進度條已重置", "success");
+        } else {
+          throw new Error("重置失敗");
+        }
+      } catch (error) {
+        console.error(error);
+        utils.showNotification("重置進度條失敗", "error");
+      }
     });
   }
 
