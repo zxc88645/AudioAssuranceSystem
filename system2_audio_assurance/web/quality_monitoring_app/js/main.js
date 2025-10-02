@@ -605,7 +605,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <td class="score ${scoreClass}">${score}</td>
           <td>${formattedDate}</td>
           <td>
-            <button class="btn btn-primary" data-report-id="${report.report_id}" ${status !== "success" ? "disabled" : ""}>
+            <button class="btn btn-primary" data-report-id="${report.report_id}">
               檢視詳情
             </button>
           </td>
