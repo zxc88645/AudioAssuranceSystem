@@ -55,8 +55,10 @@ document.addEventListener("DOMContentLoaded", () => {
     detailSuggestions: document.getElementById("detail-suggestions"),
     recordingAudioPlayer: document.getElementById("recording-audio-player"),
     monitoringAudioPlayer: document.getElementById("monitoring-audio-player"),
+    backupAudioPlayer: document.getElementById("backup-audio-player"),
     recordingTranscript: document.getElementById("recording-transcript"),
     monitoringTranscript: document.getElementById("monitoring-transcript"),
+    backupTranscript: document.getElementById("backup-transcript"),
     
     // 分頁與即時監控
     tabButtons: document.querySelectorAll(".tab-btn"),
@@ -245,6 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
       
       const isActive = stepIndex === currentIndex;
       const isComplete = stepIndex < currentIndex;
+      const isFullyComplete = currentStep === 'verification_success' || currentStep === 'verification_failed';
       
       let currentBoxWidth = boxWidth;
       let currentBoxHeight = boxHeight;
@@ -300,10 +303,13 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.font = '12px Inter, sans-serif';
         ctx.fillText(step.label, x, y - 10);
         ctx.font = '10px Inter, sans-serif';
-        const statusText = isActive && currentStep === 'file_backup' ? '檢核中...' : 
-                          isComplete ? '已完成' : '等待中...';
-        ctx.fillStyle = isActive && currentStep === 'file_backup' ? '#0284c7' : 
-                       isComplete ? '#059669' : '#475569';
+        const isFullyComplete = currentStep === 'verification_success' || currentStep === 'verification_failed';
+        const statusText = isFullyComplete ? '已完成' :
+                          isActive && currentStep === 'file_backup' ? '檢核中...' : 
+                          isComplete ? '處理中...' : '等待中...';
+        ctx.fillStyle = isFullyComplete ? '#059669' :
+                       isActive && currentStep === 'file_backup' ? '#0284c7' : 
+                       isComplete ? '#0891b2' : '#475569';
         ctx.fillText(statusText, x, y + 8);
       } else {
         if (step.isSubProcess) ctx.font = '10px Inter, sans-serif';
@@ -640,8 +646,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     elements.recordingAudioPlayer.src = report.recording_file_url || "";
     elements.monitoringAudioPlayer.src = report.monitoring_file_path || "";
+    elements.backupAudioPlayer.src = report.monitoring_file_path || ""; // 備份錄音檔使用與監控音訊相同的檔案
     elements.recordingTranscript.textContent = report.recording_stt_result?.transcript || "暫無逐字稿";
     elements.monitoringTranscript.textContent = report.monitoring_stt_result?.transcript || "暫無逐字稿";
+    elements.backupTranscript.textContent = report.monitoring_stt_result?.transcript || "暫無逐字稿"; // 備份轉文字使用與監控音訊相同的結果
 
     switchView("detail");
 
@@ -745,6 +753,7 @@ document.addEventListener("DOMContentLoaded", () => {
   elements.backToListBtn.addEventListener("click", () => {
     elements.recordingAudioPlayer.pause();
     elements.monitoringAudioPlayer.pause();
+    elements.backupAudioPlayer.pause();
     switchView("list");
   });
 
