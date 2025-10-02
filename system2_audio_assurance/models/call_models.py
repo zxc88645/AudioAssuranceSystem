@@ -47,10 +47,16 @@ class MonitoringProgressStatus(str, Enum):
     """前端進度條使用的系統二流程狀態"""
 
     WAITING_FOR_CALL = "waiting_for_call"
-    CALL_STARTED = "call_started"
+    RECORDING_STARTED = "recording_started"
+    CALL_IN_PROGRESS = "call_in_progress"
     CALL_ENDED = "call_ended"
-    VERIFYING = "verifying"
-    VERIFICATION_COMPLETE = "verification_complete"
+    FILE_STORAGE = "file_storage"
+    FILE_BACKUP = "file_backup"
+    STT_PROCESSING = "stt_processing"
+    CROSS_VERIFICATION = "cross_verification"
+    COMPARISON = "comparison"
+    RESULT_COMPLETE = "result_complete"
+    VERIFICATION_SUCCESS = "verification_success"
     VERIFICATION_FAILED = "verification_failed"
 
 

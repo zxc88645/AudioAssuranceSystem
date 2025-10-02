@@ -43,7 +43,7 @@ class RealtimeTranscriptionService:
             self._reset_task.cancel()
         self._reset_task = None
 
-    def schedule_waiting_reset(self, delay: float = 5.0):
+    def schedule_waiting_reset(self, delay: float = 3.0):
         """在指定秒數後將狀態重置為等待下一通通話"""
         self._cancel_reset_task()
         loop = asyncio.get_event_loop()
@@ -110,7 +110,7 @@ class RealtimeTranscriptionService:
             self.active_room_id = room_id
             logger.info("即時轉錄: 房間 %s 設為目前活躍通話", room_id)
             await self.broadcast_status(
-                MonitoringProgressStatus.CALL_STARTED,
+                MonitoringProgressStatus.RECORDING_STARTED,
                 session_id=room_id,
             )
 
