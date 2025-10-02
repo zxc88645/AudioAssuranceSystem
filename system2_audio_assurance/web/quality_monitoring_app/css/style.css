@@ -568,6 +568,17 @@ a:hover {
   cursor: not-allowed;
 }
 
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+.progress-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;

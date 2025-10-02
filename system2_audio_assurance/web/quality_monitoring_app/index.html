@@ -49,7 +49,10 @@
                     <h3>流程進度</h3>
                     <p>狀態將依照系統回傳自動更新。</p>
                   </div>
-                  <span class="status-chip status-chip-neutral progress-status" id="progress-status-text">等待通話</span>
+                  <div class="progress-controls">
+                    <button id="reset-progress-btn" class="btn btn-ghost btn-sm" type="button">重置</button>
+                    <span class="status-chip status-chip-neutral progress-status" id="progress-status-text">等待通話</span>
+                  </div>
                 </div>
                 <canvas id="progress-canvas" class="progress-canvas" width="800" height="300"></canvas>
                 <div class="progress-bar" role="progressbar" aria-live="polite">
