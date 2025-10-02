@@ -41,6 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
     detailView: document.getElementById("detail-view"),
     reportsTbody: document.getElementById("reports-tbody"),
     refreshReportsBtn: document.getElementById("refresh-reports-btn"),
+    cleanupReportsBtn: document.getElementById("cleanup-reports-btn"),
     noReportsMessage: document.getElementById("no-reports-message"),
     backToListBtn: document.getElementById("back-to-list-btn"),
     resetProgressBtn: document.getElementById("reset-progress-btn"),
@@ -763,6 +764,35 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  if (elements.cleanupReportsBtn) {
+    elements.cleanupReportsBtn.addEventListener("click", async () => {
+      if (!confirm("確定要清理超過 30 天的舊報告嗎？")) return;
+      
+      const btn = elements.cleanupReportsBtn;
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "清理中...";
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/reports/cleanup`, { method: "DELETE" });
+        const result = await response.json();
+        
+        if (response.ok) {
+          utils.showNotification(result.message, "success");
+          fetchAllReports();
+        } else {
+          throw new Error("清理失敗");
+        }
+      } catch (error) {
+        console.error(error);
+        utils.showNotification("清理舊報告失敗", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    });
+  }
+
   if (elements.resetProgressBtn) {
     elements.resetProgressBtn.addEventListener("click", async () => {
       try {
@@ -794,6 +824,10 @@ document.addEventListener("DOMContentLoaded", () => {
           event.preventDefault();
           elements.refreshReportsBtn?.click();
           utils.showNotification("已重新整理歷史報告", "info");
+          break;
+        case "d":
+          event.preventDefault();
+          elements.cleanupReportsBtn?.click();
           break;
       }
     }
