@@ -7,6 +7,7 @@ import logging
 from typing import Dict, Optional
 import httpx
 import tempfile
+import json
 from pathlib import Path
 from datetime import datetime
 
@@ -34,6 +35,8 @@ class AnalysisService:
             self.llm_service = LLMService()
             self.reports: Dict[str, AnalysisReport] = {}
             self.http_client = httpx.AsyncClient()
+            self.reports_file = settings.STORAGE_PATH / "reports.json"
+            self._load_reports()
             logger.info("分析服務 (AnalysisService) 初始化完成")
         except Exception as e:
             logger.error("分析服務初始化失敗: %s", e)
@@ -58,6 +61,7 @@ class AnalysisService:
         )
         
         self.reports[report.report_id] = report
+        self._save_reports()
         logger.info(
             "已為通話 %s 建立分析任務，ID: %s", call_session_id, report.report_id
         )
@@ -163,6 +167,7 @@ class AnalysisService:
             )
             report.status = AnalysisStatus.SUCCESS
             report.completed_at = datetime.now() # 增加完成時間
+            self._save_reports()
             logger.info("✅ 分析任務 %s 已成功完成", report.report_id)
             await realtime_transcription_service.broadcast_status(
                 MonitoringProgressStatus.VERIFICATION_SUCCESS,
@@ -178,6 +183,7 @@ class AnalysisService:
             report.status = AnalysisStatus.ERROR
             report.error_message = error_message
             report.completed_at = datetime.now() # 增加完成時間
+            self._save_reports()
             await realtime_transcription_service.broadcast_status(
                 MonitoringProgressStatus.VERIFICATION_FAILED,
                 session_id=report.call_session_id,
@@ -189,6 +195,29 @@ class AnalysisService:
             if downloaded_recording_path and downloaded_recording_path.exists():
                 downloaded_recording_path.unlink()
                 logger.info("分析任務 %s: 已清理下載的暫存檔", report.report_id)
+
+    def _load_reports(self):
+        """從 JSON 檔案載入報告資料"""
+        if self.reports_file.exists():
+            try:
+                with open(self.reports_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    for report_id, report_data in data.items():
+                        self.reports[report_id] = AnalysisReport(**report_data)
+                logger.info(f"已載入 {len(self.reports)} 個歷史報告")
+            except Exception as e:
+                logger.error(f"載入報告檔案失敗: {e}")
+
+    def _save_reports(self):
+        """將報告資料儲存到 JSON 檔案"""
+        try:
+            data = {}
+            for report_id, report in self.reports.items():
+                data[report_id] = report.dict()
+            with open(self.reports_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+        except Exception as e:
+            logger.error(f"儲存報告檔案失敗: {e}")
 
     def get_report(self, report_id: str) -> Optional[AnalysisReport]:
         """根據 ID 獲取分析報告。"""
