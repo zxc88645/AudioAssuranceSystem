@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>錄音檔檢核平台 - 儀表板</title>
+    <title>錄音檔檢核平台</title>
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
@@ -11,8 +11,8 @@
       <header class="header">
         <div class="header-content">
           <div class="header-badge">System 2</div>
-          <h1>錄音檔檢核平台 - 儀表板</h1>
-          <p>即時監控系統二的通話音訊品質，集中呈現比對與檢核結果。</p>
+          <h1>錄音檔檢核平台</h1>
+          <p>即時監控系統、錄音檔品質檢核，集中呈現比對與檢核結果。</p>
           <div class="header-meta">
             <span class="header-chip">自動檢核流程</span>
             <span class="header-chip">音訊差異對比</span>
@@ -167,17 +167,21 @@
               <div class="card-heading">
                 <div>
                   <h3>音訊播放與對比</h3>
-                  <p>直接聆聽官方音訊與監控音訊的差異。</p>
+                  <p>直接聆錄音檔的差異。</p>
                 </div>
               </div>
               <div class="audio-comparison">
                 <div class="audio-player-wrapper">
-                  <h4>官方音訊（System 1）</h4>
+                  <h4>線上音檔轉錄</h4>
                   <audio id="recording-audio-player" controls></audio>
                 </div>
                 <div class="audio-player-wrapper">
-                  <h4>監控音訊（System 2）</h4>
+                  <h4>錄音檔</h4>
                   <audio id="monitoring-audio-player" controls></audio>
+                </div>
+                <div class="audio-player-wrapper">
+                  <h4>備份錄音檔</h4>
+                  <audio id="backup-audio-player" controls></audio>
                 </div>
               </div>
             </div>
@@ -191,12 +195,16 @@
               </div>
               <div class="stt-comparison">
                 <div class="transcript-panel">
-                  <h4>官方音訊轉文字</h4>
+                  <h4>線上音檔轉文字</h4>
                   <div id="recording-transcript" class="transcript-content"></div>
                 </div>
                 <div class="transcript-panel">
-                  <h4>監控音訊轉文字</h4>
+                  <h4>錄音檔轉文字</h4>
                   <div id="monitoring-transcript" class="transcript-content"></div>
+                </div>
+                <div class="transcript-panel">
+                  <h4>備份錄音檔轉文字</h4>
+                  <div id="backup-transcript" class="transcript-content"></div>
                 </div>
               </div>
             </div>
