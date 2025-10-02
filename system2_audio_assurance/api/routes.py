@@ -49,3 +49,17 @@ async def get_report_details(report_id: str):
     if not report:
         raise HTTPException(status_code=404, detail=f"找不到報告 ID: {report_id}")
     return report
+
+
+@router.post("/reset-progress", status_code=200)
+async def reset_progress():
+    """手動重置進度條狀態。"""
+    from services.realtime_transcription_service import realtime_transcription_service
+    from models.call_models import MonitoringProgressStatus
+    
+    await realtime_transcription_service.broadcast_status(
+        MonitoringProgressStatus.WAITING_FOR_CALL,
+        session_id=None,
+        force=True,
+    )
+    return {"message": "進度條已重置"}
