@@ -51,28 +51,7 @@
                   </div>
                   <span class="status-chip status-chip-neutral progress-status" id="progress-status-text">等待通話</span>
                 </div>
-                <div class="progress-track">
-                  <div class="progress-step is-active" data-status="waiting_for_call">
-                    <div class="step-circle">1</div>
-                    <span class="step-label">等待通話</span>
-                  </div>
-                  <div class="progress-step is-pending" data-status="call_started">
-                    <div class="step-circle">2</div>
-                    <span class="step-label">通話進行中</span>
-                  </div>
-                  <div class="progress-step is-pending" data-status="call_ended">
-                    <div class="step-circle">3</div>
-                    <span class="step-label">通話已結束</span>
-                  </div>
-                  <div class="progress-step is-pending" data-status="verifying">
-                    <div class="step-circle">4</div>
-                    <span class="step-label">檢核中</span>
-                  </div>
-                  <div class="progress-step is-pending" data-status="verification_complete">
-                    <div class="step-circle">5</div>
-                    <span class="step-label">檢核完成</span>
-                  </div>
-                </div>
+                <canvas id="progress-canvas" class="progress-canvas" width="800" height="300"></canvas>
                 <div class="progress-bar" role="progressbar" aria-live="polite">
                   <div class="progress-bar-fill" id="progress-bar-fill"></div>
                 </div>
